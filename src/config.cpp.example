@@ -1,0 +1,7 @@
+#include "Arduino.h"
+const char *hostname = "ggkg";
+const char* ssid = "wdnmd";
+const char* password = "a1gaoshan";
+IPAddress local_ip(192, 168, 1, 100);
+IPAddress netmask(255, 255, 255, 0);
+IPAddress gateway(192, 168, 1, 1);
