@@ -32,6 +32,10 @@ time_t ts;
 tm struct_ts;
 
 HardwareSerial uart0 = Serial;
+// Preallocate the 1st and 2nd PWM channel and overwrite with camera,
+// in order to avoid channel conflict
+Servo s_prealloc0;
+Servo s_prealloc1;
 Servo s_pitch;
 Servo s_yaw;
 
@@ -50,10 +54,12 @@ void setup() {
 	uart0.println();
 
     uart0.print("Attaching servo: ");
+	s_prealloc0.attach(SERVO_PITCH);
+	s_prealloc1.attach(SERVO_PITCH);
     uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH));
-	s_pitch.write(14);
+	s_pitch.write(pitch_default);
     uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW));
-	s_yaw.write(140);
+	s_yaw.write(yaw_default);
     uart0.println("done.");
 	analogWrite(LED_FLASH, 10);
 
@@ -141,8 +147,8 @@ void setup() {
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	net_asm();
-	// delay(10000);
+	// net_asm();
+	delay(10000);
 }
 
 void cam_asm() {

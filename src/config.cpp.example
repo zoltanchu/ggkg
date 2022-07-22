@@ -1,4 +1,6 @@
 #include "Arduino.h"
+int pitch_default = 20;
+int yaw_default = 90;
 const char *hostname = "ggkg";
 const char* ssid = "wdnmd";
 const char* password = "a1gaoshan";

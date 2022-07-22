@@ -73,7 +73,7 @@ int ESP32PWM::timerAndIndexToChannel(int timerNum, int index) {
 int ESP32PWM::allocatenext(double freq) {
 	long freqlocal = (long) freq;
 	if (pwmChannel < 0) {
-		for (int i = 2; i < 4; i++) {
+		for (int i = 0; i < 4; i++) {
 			bool freqAllocated = ((timerFreqSet[i] == freqlocal)
 					|| (timerFreqSet[i] == -1));
 			if (freqAllocated && timerCount[i] < 4) {
