@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1">
         <title>GGKG</title>
+        <!-- default: #ff3034; #f21c21; -->
         <style>
             body {
                 font-family: Arial,Helvetica,sans-serif;
@@ -143,7 +144,7 @@
                 line-height: 28px;
                 cursor: pointer;
                 color: #fff;
-                background: #ff3034;
+                background: #26a69a;
                 border-radius: 5px;
                 font-size: 16px;
                 outline: 0
@@ -161,11 +162,11 @@
             }
 
             button:hover {
-                background: #ff494d
+                background: #26a69a
             }
 
             button:active {
-                background: #f21c21
+                background: #80cbc4
             }
 
             button.disabled {
@@ -200,7 +201,7 @@
                 height: 22px;
                 width: 22px;
                 border-radius: 50px;
-                background: #ff3034;
+                background: #26a69a;
                 cursor: pointer;
                 -webkit-appearance: none;
                 margin-top: -11.5px
@@ -224,7 +225,7 @@
                 height: 22px;
                 width: 22px;
                 border-radius: 50px;
-                background: #ff3034;
+                background: #26a69a;
                 cursor: pointer
             }
 
@@ -254,7 +255,7 @@
                 height: 22px;
                 width: 22px;
                 border-radius: 50px;
-                background: #ff3034;
+                background: #26a69a;
                 cursor: pointer;
                 height: 2px
             }
@@ -307,7 +308,7 @@
             }
 
             input:checked+.slider {
-                background-color: #ff3034
+                background-color: #26a69a
             }
 
             input:checked+.slider:before {
@@ -332,7 +333,7 @@
                 position: absolute;
                 right: 5px;
                 top: 5px;
-                background: #ff3034;
+                background: #26a69a;
                 width: 16px;
                 height: 16px;
                 border-radius: 100px;
@@ -382,250 +383,270 @@
     <body>
         <section class="main">
             <div id="logo">
-                <label for="nav-toggle-cb" id="nav-toggle">&#9776;&nbsp;&nbsp;Toggle OV2640 settings</label>
+                <label for="nav-toggle-cb" id="nav-toggle">&#9776;&nbsp;&nbsp;Settings Panel</label>
             </div>
             <div id="content">
                 <div id="sidebar">
                     <input type="checkbox" id="nav-toggle-cb" checked="checked">
                     <nav id="menu">
-
-                        <section id="xclk-section" class="nothidden">
-                            <div class="input-group" id="set-xclk-group">
-                                <label for="set-xclk">XCLK MHz</label>
-                                <div class="text">
-                                    <input id="xclk" type="text" minlength="1" maxlength="2" size="2" value="20">
-                                </div>
-                                <button class="inline-button" id="set-xclk">Set</button>
-                            </div>
-                        </section>
-
-                        <div class="input-group" id="framesize-group">
-                            <label for="framesize">Resolution</label>
-                            <select id="framesize" class="default-action">
-                                <!-- 2MP -->
-                                <option value="13">UXGA(1600x1200)</option>
-                                <option value="12">SXGA(1280x1024)</option>
-                                <option value="11">HD(1280x720)</option>
-                                <option value="10">XGA(1024x768)</option>
-                                <option value="9">SVGA(800x600)</option>
-                                <option value="8">VGA(640x480)</option>
-                                <option value="7">HVGA(480x320)</option>
-                                <option value="6">CIF(400x296)</option>
-                                <option value="5">QVGA(320x240)</option>
-                                <option value="4">240x240</option>
-                                <option value="3">HQVGA(240x176)</option>
-                                <option value="2">QCIF(176x144)</option>
-                                <option value="1">QQVGA(160x120)</option>
-                                <option value="0">96x96</option>
-                            </select>
-                        </div>
-                        <!-- Consider using instant-action if using servo with better performance -->
-                        <div class="input-group" id="yaw-group">
-                            <label for="yaw">Servo Yaw</label>
-                            <div class="range-min">-90</div>
-                            <input type="range" id="yaw" min="0" max="180" value="180" class="default-action">
-                            <div class="range-max">90</div>
-                        </div>
-                        <div class="input-group" id="pitch-group">
-                            <label for="pitch">Servo Pitch</label>
-                            <div class="range-min">-20</div>
-                            <input type="range" id="pitch" min="0" max="180" value="16" class="default-action">
-                            <div class="range-max">160</div>
-                        </div>
-                        <div class="input-group" id="flash-group">
-                            <label for="flash">Flashlight</label>
-                            <div class="range-min">0</div>
-                            <input type="range" id="flash" min="0" max="255" value="10" class="default-action">
-                            <div class="range-max">255</div>
-                        </div>
-                        <div class="input-group" id="quality-group">
-                            <label for="quality">Quality</label>
-                            <div class="range-min">4</div>
-                            <input type="range" id="quality" min="4" max="63" value="10" class="default-action">
-                            <div class="range-max">63</div>
-                        </div>
-                        <div class="input-group" id="brightness-group">
-                            <label for="brightness">Brightness</label>
-                            <div class="range-min">-2</div>
-                            <input type="range" id="brightness" min="-2" max="2" value="0" class="default-action">
-                            <div class="range-max">2</div>
-                        </div>
-                        <div class="input-group" id="contrast-group">
-                            <label for="contrast">Contrast</label>
-                            <div class="range-min">-2</div>
-                            <input type="range" id="contrast" min="-2" max="2" value="0" class="default-action">
-                            <div class="range-max">2</div>
-                        </div>
-                        <div class="input-group" id="saturation-group">
-                            <label for="saturation">Saturation</label>
-                            <div class="range-min">-2</div>
-                            <input type="range" id="saturation" min="-2" max="2" value="0" class="default-action">
-                            <div class="range-max">2</div>
-                        </div>
-                        <div class="input-group" id="special_effect-group">
-                            <label for="special_effect">Special Effect</label>
-                            <select id="special_effect" class="default-action">
-                                <option value="0" selected="selected">No Effect</option>
-                                <option value="1">Negative</option>
-                                <option value="2">Grayscale</option>
-                                <option value="3">Red Tint</option>
-                                <option value="4">Green Tint</option>
-                                <option value="5">Blue Tint</option>
-                                <option value="6">Sepia</option>
-                            </select>
-                        </div>
-                        <div class="input-group" id="awb-group">
-                            <label for="awb">AWB</label>
-                            <div class="switch">
-                                <input id="awb" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="awb"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="awb_gain-group">
-                            <label for="awb_gain">AWB Gain</label>
-                            <div class="switch">
-                                <input id="awb_gain" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="awb_gain"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="wb_mode-group">
-                            <label for="wb_mode">WB Mode</label>
-                            <select id="wb_mode" class="default-action">
-                                <option value="0" selected="selected">Auto</option>
-                                <option value="1">Sunny</option>
-                                <option value="2">Cloudy</option>
-                                <option value="3">Office</option>
-                                <option value="4">Home</option>
-                            </select>
-                        </div>
-                        <div class="input-group" id="aec-group">
-                            <label for="aec">AEC SENSOR</label>
-                            <div class="switch">
-                                <input id="aec" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="aec"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="aec2-group">
-                            <label for="aec2">AEC DSP</label>
-                            <div class="switch">
-                                <input id="aec2" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="aec2"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="ae_level-group">
-                            <label for="ae_level">AE Level</label>
-                            <div class="range-min">-2</div>
-                            <input type="range" id="ae_level" min="-2" max="2" value="0" class="default-action">
-                            <div class="range-max">2</div>
-                        </div>
-                        <div class="input-group" id="aec_value-group">
-                            <label for="aec_value">Exposure</label>
-                            <div class="range-min">0</div>
-                            <input type="range" id="aec_value" min="0" max="1200" value="204" class="default-action">
-                            <div class="range-max">1200</div>
-                        </div>
-                        <div class="input-group" id="agc-group">
-                            <label for="agc">AGC</label>
-                            <div class="switch">
-                                <input id="agc" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="agc"></label>
-                            </div>
-                        </div>
-                        <div class="input-group hidden" id="agc_gain-group">
-                            <label for="agc_gain">Gain</label>
-                            <div class="range-min">1x</div>
-                            <input type="range" id="agc_gain" min="0" max="30" value="5" class="default-action">
-                            <div class="range-max">31x</div>
-                        </div>
-                        <div class="input-group" id="gainceiling-group">
-                            <label for="gainceiling">Gain Ceiling</label>
-                            <div class="range-min">2x</div>
-                            <input type="range" id="gainceiling" min="0" max="6" value="0" class="default-action">
-                            <div class="range-max">128x</div>
-                        </div>
-                        <div class="input-group" id="bpc-group">
-                            <label for="bpc">BPC</label>
-                            <div class="switch">
-                                <input id="bpc" type="checkbox" class="default-action">
-                                <label class="slider" for="bpc"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="wpc-group">
-                            <label for="wpc">WPC</label>
-                            <div class="switch">
-                                <input id="wpc" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="wpc"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="raw_gma-group">
-                            <label for="raw_gma">Raw GMA</label>
-                            <div class="switch">
-                                <input id="raw_gma" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="raw_gma"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="lenc-group">
-                            <label for="lenc">Lens Correction</label>
-                            <div class="switch">
-                                <input id="lenc" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="lenc"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="hmirror-group">
-                            <label for="hmirror">H-Mirror</label>
-                            <div class="switch">
-                                <input id="hmirror" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="hmirror"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="vflip-group">
-                            <label for="vflip">V-Flip</label>
-                            <div class="switch">
-                                <input id="vflip" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="vflip"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="dcw-group">
-                            <label for="dcw">DCW (Downsize EN)</label>
-                            <div class="switch">
-                                <input id="dcw" type="checkbox" class="default-action" checked="checked">
-                                <label class="slider" for="dcw"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="colorbar-group">
-                            <label for="colorbar">Color Bar</label>
-                            <div class="switch">
-                                <input id="colorbar" type="checkbox" class="default-action">
-                                <label class="slider" for="colorbar"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="led-group">
-                          <label for="led_intensity">LED Intensity</label>
-                          <div class="range-min">0</div>
-                          <input type="range" id="led_intensity" min="0" max="255" value="0" class="default-action">
-                          <div class="range-max">255</div>
-                        </div>
-                        <div class="input-group" id="face_detect-group">
-                            <label for="face_detect">Face Detection</label>
-                            <div class="switch">
-                                <input id="face_detect" type="checkbox" class="default-action">
-                                <label class="slider" for="face_detect"></label>
-                            </div>
-                        </div>
-                        <div class="input-group" id="face_recognize-group">
-                            <label for="face_recognize">Face Recognition</label>
-                            <div class="switch">
-                                <input id="face_recognize" type="checkbox" class="default-action">
-                                <label class="slider" for="face_recognize"></label>
-                            </div>
-                        </div>
                         <section id="buttons">
-                            <button id="get-still">Get Still</button>
+                            <button id="get-still">Capture</button>
                             <button id="toggle-stream">Start Stream</button>
                             <button id="face_enroll" class="disabled" disabled="disabled">Enroll Face</button>
+                            <button id="reset-camera">Reset</button>
                         </section>
 
-                        <div style="margin-top: 8px;"><center><span style="font-weight: bold;">Advanced Settings</span></center></div>
+                        <label for="nav-toggle-periph" class="toggle-section-label">&#9776;&nbsp;&nbsp;Peripherals</label><input type="checkbox" id="nav-toggle-periph" class="hidden toggle-section-button">
+                        <section class="toggle-section">
+                          <!-- Consider using instant-action if using servo with better performance -->
+                          <div class="input-group" id="yaw-group">
+                              <label for="yaw">Servo Yaw</label>
+                              <div class="range-min">-90</div>
+                              <input type="range" id="yaw" min="0" max="180" value="165" class="default-action">
+                              <div class="range-max">90</div>
+                          </div>
+                          <div class="input-group" id="pitch-group">
+                              <label for="pitch">Servo Pitch</label>
+                              <div class="range-min">-20</div>
+                              <input type="range" id="pitch" min="0" max="180" value="15" class="default-action">
+                              <div class="range-max">160</div>
+                          </div>
+                          <div class="input-group" id="flash-group">
+                              <label for="flash">Flashlight</label>
+                              <div class="range-min">0</div>
+                              <input type="range" id="flash" min="0" max="255" value="0" class="default-action">
+                              <div class="range-max">255</div>
+                          </div>
+                        </section>
+                        <hr style="width:100%">
+                        <label for="nav-toggle-image" class="toggle-section-label">&#9776;&nbsp;&nbsp;Image Settings</label><input type="checkbox" id="nav-toggle-image" class="hidden toggle-section-button" checked="checked">
+                        <section class="toggle-section">
+                          <div class="input-group" id="framesize-group">
+                              <label for="framesize">Resolution</label>
+                              <select id="framesize" class="default-action">
+                                  <!-- 2MP -->
+                                  <option value="13">UXGA(1600x1200)</option>
+                                  <option value="12">SXGA(1280x1024)</option>
+                                  <option value="11">HD(1280x720)</option>
+                                  <option value="10">XGA(1024x768)</option>
+                                  <option value="9">SVGA(800x600)</option>
+                                  <option value="8">VGA(640x480)</option>
+                                  <option value="7">HVGA(480x320)</option>
+                                  <option value="6">CIF(400x296)</option>
+                                  <option value="5">QVGA(320x240)</option>
+                                  <option value="4">240x240</option>
+                                  <option value="3">HQVGA(240x176)</option>
+                                  <option value="2">QCIF(176x144)</option>
+                                  <option value="1">QQVGA(160x120)</option>
+                                  <option value="0">96x96</option>
+                              </select>
+                          </div>
+                          <div class="input-group" id="quality-group">
+                              <label for="quality">Quality</label>
+                              <div class="range-min">4</div>
+                              <input type="range" id="quality" min="4" max="63" value="10" class="default-action">
+                              <div class="range-max">63</div>
+                          </div>
+                          <div class="input-group" id="brightness-group">
+                              <label for="brightness">Brightness</label>
+                              <div class="range-min">-2</div>
+                              <input type="range" id="brightness" min="-2" max="2" value="0" class="default-action">
+                              <div class="range-max">2</div>
+                          </div>
+                          <div class="input-group" id="contrast-group">
+                              <label for="contrast">Contrast</label>
+                              <div class="range-min">-2</div>
+                              <input type="range" id="contrast" min="-2" max="2" value="0" class="default-action">
+                              <div class="range-max">2</div>
+                          </div>
+                          <div class="input-group" id="saturation-group">
+                              <label for="saturation">Saturation</label>
+                              <div class="range-min">-2</div>
+                              <input type="range" id="saturation" min="-2" max="2" value="0" class="default-action">
+                              <div class="range-max">2</div>
+                          </div>
+                          <div class="input-group" id="special_effect-group">
+                              <label for="special_effect">Special Effect</label>
+                              <select id="special_effect" class="default-action">
+                                  <option value="0" selected="selected">No Effect</option>
+                                  <option value="1">Negative</option>
+                                  <option value="2">Grayscale</option>
+                                  <option value="3">Red Tint</option>
+                                  <option value="4">Green Tint</option>
+                                  <option value="5">Blue Tint</option>
+                                  <option value="6">Sepia</option>
+                              </select>
+                          </div>
+                        </section>
+                        <hr style="width:100%">
+                        <label for="nav-toggle-image-adj" class="toggle-section-label">&#9776;&nbsp;&nbsp;Image Adjustment</label><input type="checkbox" id="nav-toggle-image-adj" class="hidden toggle-section-button" checked="checked">
+                        <section class="toggle-section">
+                          <div class="input-group" id="lenc-group">
+                              <label for="lenc">Lens Correction</label>
+                              <div class="switch">
+                                  <input id="lenc" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="lenc"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="hmirror-group">
+                              <label for="hmirror">H-Mirror</label>
+                              <div class="switch">
+                                  <input id="hmirror" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="hmirror"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="vflip-group">
+                              <label for="vflip">V-Flip</label>
+                              <div class="switch">
+                                  <input id="vflip" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="vflip"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="dcw-group">
+                              <label for="dcw">DCW (Downsize EN)</label>
+                              <div class="switch">
+                                  <input id="dcw" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="dcw"></label>
+                              </div>
+                          </div>
+                        </section>
+                        <hr style="width:100%">
+                        <label for="nav-toggle-sensor" class="toggle-section-label">&#9776;&nbsp;&nbsp;Camera Sensor Settings</label><input type="checkbox" id="nav-toggle-sensor" class="hidden toggle-section-button" checked="checked">
+                        <section class="toggle-section">
+                          <div class="input-group" id="awb-group">
+                              <label for="awb">AWB</label>
+                              <div class="switch">
+                                  <input id="awb" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="awb"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="awb_gain-group">
+                              <label for="awb_gain">AWB Gain</label>
+                              <div class="switch">
+                                  <input id="awb_gain" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="awb_gain"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="wb_mode-group">
+                              <label for="wb_mode">WB Mode</label>
+                              <select id="wb_mode" class="default-action">
+                                  <option value="0" selected="selected">Auto</option>
+                                  <option value="1">Sunny</option>
+                                  <option value="2">Cloudy</option>
+                                  <option value="3">Office</option>
+                                  <option value="4">Home</option>
+                              </select>
+                          </div>
+                          <div class="input-group" id="aec-group">
+                              <label for="aec">AEC SENSOR</label>
+                              <div class="switch">
+                                  <input id="aec" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="aec"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="aec2-group">
+                              <label for="aec2">AEC DSP</label>
+                              <div class="switch">
+                                  <input id="aec2" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="aec2"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="ae_level-group">
+                              <label for="ae_level">AE Level</label>
+                              <div class="range-min">-2</div>
+                              <input type="range" id="ae_level" min="-2" max="2" value="0" class="default-action">
+                              <div class="range-max">2</div>
+                          </div>
+                          <div class="input-group" id="aec_value-group">
+                              <label for="aec_value">Exposure</label>
+                              <div class="range-min">0</div>
+                              <input type="range" id="aec_value" min="0" max="1200" value="204" class="default-action">
+                              <div class="range-max">1200</div>
+                          </div>
+                          <div class="input-group" id="agc-group">
+                              <label for="agc">AGC</label>
+                              <div class="switch">
+                                  <input id="agc" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="agc"></label>
+                              </div>
+                          </div>
+                          <div class="input-group hidden" id="agc_gain-group">
+                              <label for="agc_gain">Gain</label>
+                              <div class="range-min">1x</div>
+                              <input type="range" id="agc_gain" min="0" max="30" value="5" class="default-action">
+                              <div class="range-max">31x</div>
+                          </div>
+                          <div class="input-group" id="gainceiling-group">
+                              <label for="gainceiling">Gain Ceiling</label>
+                              <div class="range-min">2x</div>
+                              <input type="range" id="gainceiling" min="0" max="6" value="0" class="default-action">
+                              <div class="range-max">128x</div>
+                          </div>
+                          <div class="input-group" id="bpc-group">
+                              <label for="bpc">BPC</label>
+                              <div class="switch">
+                                  <input id="bpc" type="checkbox" class="default-action">
+                                  <label class="slider" for="bpc"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="wpc-group">
+                              <label for="wpc">WPC</label>
+                              <div class="switch">
+                                  <input id="wpc" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="wpc"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="raw_gma-group">
+                              <label for="raw_gma">Raw GMA</label>
+                              <div class="switch">
+                                  <input id="raw_gma" type="checkbox" class="default-action" checked="checked">
+                                  <label class="slider" for="raw_gma"></label>
+                              </div>
+                          </div>
+                        </section>
+
+                        <hr style="width:100%">
+                        <label for="nav-toggle-other" class="toggle-section-label">&#9776;&nbsp;&nbsp;Other</label><input type="checkbox" id="nav-toggle-other" class="hidden toggle-section-button" checked="checked">
+                        <section class="toggle-section">
+                          <section id="xclk-section" class="nothidden">
+                              <div class="input-group" id="set-xclk-group">
+                                  <label for="set-xclk">XCLK MHz</label>
+                                  <div class="text">
+                                      <input id="xclk" type="text" minlength="1" maxlength="2" size="2" value="20">
+                                  </div>
+                                  <button class="inline-button" id="set-xclk">Set</button>
+                              </div>
+                          </section>
+
+                          <div class="input-group" id="colorbar-group">
+                              <label for="colorbar">Color Bar</label>
+                              <div class="switch">
+                                  <input id="colorbar" type="checkbox" class="default-action">
+                                  <label class="slider" for="colorbar"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="led-group">
+                            <label for="led_intensity">LED Intensity</label>
+                            <div class="range-min">0</div>
+                            <input type="range" id="led_intensity" min="0" max="255" value="0" class="default-action">
+                            <div class="range-max">255</div>
+                          </div>
+                          <div class="input-group" id="face_detect-group">
+                              <label for="face_detect">Face Detection</label>
+                              <div class="switch">
+                                  <input id="face_detect" type="checkbox" class="default-action">
+                                  <label class="slider" for="face_detect"></label>
+                              </div>
+                          </div>
+                          <div class="input-group" id="face_recognize-group">
+                              <label for="face_recognize">Face Recognition</label>
+                              <div class="switch">
+                                  <input id="face_recognize" type="checkbox" class="default-action">
+                                  <label class="slider" for="face_recognize"></label>
+                              </div>
+                          </div>
+                        </section>
+                        <div style="margin-top: 8px; margin-left: auto; margin-right: auto;"><span style="font-weight: bold;">Advanced Settings</span></div>
                         <hr style="width:100%">
                         <label for="nav-toggle-reg" class="toggle-section-label">&#9776;&nbsp;&nbsp;Register Get/Set</label><input type="checkbox" id="nav-toggle-reg" class="hidden toggle-section-button" checked="checked">
                         <section class="toggle-section">
@@ -1006,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', function (event) {
       return response.json()
     })
     .then(function (state) {
+      document.title = "GGKG (" + state["hostname"] + ")"
       document
         .querySelectorAll('.default-action')
         .forEach(el => {
@@ -1027,6 +1049,7 @@ document.addEventListener('DOMContentLoaded', function (event) {
   const stillButton = document.getElementById('get-still')
   const streamButton = document.getElementById('toggle-stream')
   const enrollButton = document.getElementById('face_enroll')
+  const resetButton = document.getElementById('reset-camera')
   const closeButton = document.getElementById('close-stream')
   const saveButton = document.getElementById('save-still')
   const ledGroup = document.getElementById('led-group')
@@ -1043,6 +1066,12 @@ document.addEventListener('DOMContentLoaded', function (event) {
   }
 
   // Attach actions to buttons
+  resetButton.onclick = () => {
+    view.src = `${baseHost}/control?var=reset&val=0`
+    show(viewContainer)
+    history.go(0)
+  }
+
   stillButton.onclick = () => {
     stopStream()
     view.src = `${baseHost}/capture?_cb=${Date.now()}`
@@ -1078,7 +1107,7 @@ document.addEventListener('DOMContentLoaded', function (event) {
       var dataURL = canvas.toDataURL('image/jpeg');
       saveButton.href = dataURL;
       var d = new Date();
-      saveButton.download = d.getFullYear() + ("0"+(d.getMonth()+1)).slice(-2) + ("0" + d.getDate()).slice(-2) + ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2) + ".jpg";
+      saveButton.download = "ggkg_" + document.location.hostname + "_" + d.getFullYear() + ("0"+(d.getMonth()+1)).slice(-2) + ("0" + d.getDate()).slice(-2) + 'T' + ("0" + d.getHours()).slice(-2) + ("0" + d.getMinutes()).slice(-2) + ("0" + d.getSeconds()).slice(-2) + "+M" + d.getTimezoneOffset() + ".jpg";
     } catch (e) {
       console.error(e);
     }

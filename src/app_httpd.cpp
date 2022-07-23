@@ -21,10 +21,12 @@
 #include "camera_index.h"
 #include "sdkconfig.h"
 #include "ESP32Servo.h"
-#include "panel.h"
+#include "config.h"
 // #define CONFIG_LED_ILLUMINATOR_ENABLED
 #define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_0
 #define CONFIG_LED_MAX_INTENSITY 100
+#define CONFIG_ESP_FACE_DETECT_ENABLED 1
+#define CONFIG_ESP_FACE_RECOGNITION_ENABLED 1
 
 extern uint8_t flash_br;
 extern Servo s_pitch;
@@ -732,12 +734,12 @@ static esp_err_t cmd_handler(httpd_req_t *req)
     }
     else if (!strcmp(variable, "flash")) {
         if(flash_br < val)
-            for(flash_br; flash_br < val; flash_br++) {
+            for(; flash_br < val; flash_br++) {
                 analogWrite(4, flash_br);
                 delay(3);
             }
         else
-            for(flash_br; flash_br > val; flash_br--) {
+            for(; flash_br > val; flash_br--) {
                 analogWrite(4, flash_br);
                 delay(3);
             }
@@ -877,6 +879,7 @@ static esp_err_t status_handler(httpd_req_t *req)
         p+=print_reg(p, s, 0x132, 0xFF);
     }
 
+    p += sprintf(p, "\"hostname\":\"%s\",", hostname);
     p += sprintf(p, "\"pitch\":%u,", s_pitch.read());
     p += sprintf(p, "\"yaw\":%u,", s_yaw.read());
     p += sprintf(p, "\"flash\":%u,", flash_br);
@@ -1090,18 +1093,6 @@ static esp_err_t win_handler(httpd_req_t *req)
     return httpd_resp_send(req, NULL, 0);
 }
 
-static esp_err_t panel_handler(httpd_req_t *req)
-{
-    httpd_resp_set_type(req, "text/html");
-    // httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
-    sensor_t *s = esp_camera_sensor_get();
-    if (s != NULL) {
-        return httpd_resp_send(req, panel_page, len_panel_page);
-    } else {
-        ESP_LOGE(TAG, "Camera sensor not found");
-        return httpd_resp_send_500(req);
-    }
-}
 
 static esp_err_t index_handler(httpd_req_t *req)
 {
@@ -1127,14 +1118,8 @@ void startCameraServer()
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 16;
 
-    httpd_uri_t panel_uri = {
-        .uri = "/panel",
-        .method = HTTP_GET,
-        .handler = panel_handler,
-        .user_ctx = NULL};
-
     httpd_uri_t index_uri = {
-        .uri = "/legacy",
+        .uri = "/",
         .method = HTTP_GET,
         .handler = index_handler,
         .user_ctx = NULL};
@@ -1226,7 +1211,7 @@ void startCameraServer()
     if(camera_httpd != NULL) httpd_stop(&camera_httpd);
     if (httpd_start(&camera_httpd, &config) == ESP_OK)
     {
-        httpd_register_uri_handler(camera_httpd, &panel_uri);
+        // httpd_register_uri_handler(camera_httpd, &panel_uri);
         httpd_register_uri_handler(camera_httpd, &index_uri);
         httpd_register_uri_handler(camera_httpd, &cmd_uri);
         httpd_register_uri_handler(camera_httpd, &status_uri);
