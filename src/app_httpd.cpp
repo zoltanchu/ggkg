@@ -1124,6 +1124,16 @@ void startCameraServer()
         .handler = index_handler,
         .user_ctx = NULL};
 
+    httpd_uri_t favicon_uri = {
+        .uri = "/favicon.ico",
+        .method = HTTP_GET,
+        .handler = [] (httpd_req_t *req) {
+            httpd_resp_set_type(req, "image/x-icon");
+            httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+            return httpd_resp_send(req, (const char *)favicon_ico_gz, favicon_ico_gz_len);
+        },
+        .user_ctx = NULL};
+
     httpd_uri_t status_uri = {
         .uri = "/status",
         .method = HTTP_GET,
@@ -1213,6 +1223,7 @@ void startCameraServer()
     {
         // httpd_register_uri_handler(camera_httpd, &panel_uri);
         httpd_register_uri_handler(camera_httpd, &index_uri);
+        httpd_register_uri_handler(camera_httpd, &favicon_uri);
         httpd_register_uri_handler(camera_httpd, &cmd_uri);
         httpd_register_uri_handler(camera_httpd, &status_uri);
         httpd_register_uri_handler(camera_httpd, &capture_uri);
