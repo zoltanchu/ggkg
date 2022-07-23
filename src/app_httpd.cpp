@@ -22,9 +22,9 @@
 #include "sdkconfig.h"
 #include "ESP32Servo.h"
 #include "config.h"
-// #define CONFIG_LED_ILLUMINATOR_ENABLED
-#define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_0
-#define CONFIG_LED_MAX_INTENSITY 100
+#define CONFIG_LED_ILLUMINATOR_ENABLED
+#define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
+#define CONFIG_LED_MAX_INTENSITY 255
 #define CONFIG_ESP_FACE_DETECT_ENABLED 1
 #define CONFIG_ESP_FACE_RECOGNITION_ENABLED 1
 
@@ -1127,7 +1127,7 @@ void startCameraServer()
     httpd_uri_t favicon_uri = {
         .uri = "/favicon.ico",
         .method = HTTP_GET,
-        .handler = [] (httpd_req_t *req) {
+        .handler = [] (httpd_req_t *req) -> esp_err_t {
             httpd_resp_set_type(req, "image/x-icon");
             httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
             return httpd_resp_send(req, (const char *)favicon_ico_gz, favicon_ico_gz_len);
