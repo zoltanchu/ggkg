@@ -1067,6 +1067,7 @@ document.addEventListener('DOMContentLoaded', function (event) {
 
   // Attach actions to buttons
   resetButton.onclick = () => {
+    stopStream()
     view.src = `${baseHost}/control?var=reset&val=0`
     show(viewContainer)
     history.go(0)
@@ -1097,9 +1098,13 @@ document.addEventListener('DOMContentLoaded', function (event) {
   }
 
   saveButton.onclick = () => {
+    const image_width = [96,160,176,240,240,320,400,480,640,800,1024,1280,1280,1600]
+    const image_height = [96,120,144,176,240,240,296,320,480,600,768,720,1024,1200]
     var canvas = document.createElement("canvas");
-    canvas.width = view.width;
-    canvas.height = view.height;
+    // canvas.width = view.width;
+    // canvas.height = view.height;
+    canvas.width = image_width[framesize.value];
+    canvas.height = image_height[framesize.value];
     document.body.appendChild(canvas);
     var context = canvas.getContext('2d');
     context.drawImage(view,0,0);

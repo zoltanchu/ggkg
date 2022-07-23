@@ -374,7 +374,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
     }
 
     httpd_resp_set_type(req, "image/jpeg");
-    httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=capture.jpg");
+    httpd_resp_set_hdr(req, "Content-Disposition", "inline; filename=ggkg.jpg");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
 
     char ts[32];

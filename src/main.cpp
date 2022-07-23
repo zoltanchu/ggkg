@@ -122,7 +122,7 @@ void setup() {
 		uart0.print(": ");
 		// TODO: online config over serial, bluetooth
 		WiFi.begin(ssid, password);
-#ifdef UART_CONFIGURABLE
+#ifdef WLAN_UART_CONFIGURABLE
 	}
 #endif
     if(WiFi.waitForConnectResult() == WL_CONNECTED) {
@@ -147,27 +147,7 @@ void setup() {
 
 void loop() {
 	// put your main code here, to run repeatedly:
-	// net_asm();
 	delay(10000);
-}
-
-void cam_asm() {
-	return;
-}
-
-void net_asm() {
-	switch(WiFi.status()) {
-		/*
-		case WL_IDLE_STATUS:
-		*/
-		case WL_CONNECT_FAILED:
-		case WL_CONNECTION_LOST:
-		case WL_DISCONNECTED:
-		case WL_NO_SHIELD:
-			WiFi.begin(ssid, password);
-			startCameraServer();
-		default: break;
-	}
 }
 
 esp_err_t cam_init() {
