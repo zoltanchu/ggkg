@@ -1,24 +1,8 @@
-#include <Arduino.h>
+#include "main.h"
 #include "config.h"
-#include "esp_camera.h"
 #include "time.h"
 #include <ESP32Servo.h>
 #include <WiFi.h>
-
-#define CAMERA_MODEL_AI_THINKER // Has PSRAM
-
-#define WLAN_CONN_TIME_MAX  10e3
-#define LED_FLASH 4
-#define LED_BUILTIN 33
-#define SERVO_PITCH 14
-#define SERVO_YAW 15
-// #ifdef PWM_BASE_INDEX
-// #undef PWM_BASE_INDEX
-// #define PWM_BASE_INDEX 2
-// #endif
-// ESP32PWM.cpp, pwmChannel = 2
-// TODO: Allocate appropriate PWM channel in user program, not modifying libraries
-
 #include "camera_pins.h"
 
 const char *ntp_server1 = "pool.ntp.org";
@@ -26,11 +10,13 @@ const char *ntp_server2 = "time.nist.gov";
 const char *ntp_server3 = "cn.ntp.org.cn";
 const char *timezone = "HKT-8";
 
+bool camera_is_inited = false, isStreaming = false;
 uint8_t flash_br = 0;
 String uart0_rbuf = "";
-time_t ts;
+time_t ts, ts_camera_open;
 tm struct_ts;
 
+camera_config_t config;
 HardwareSerial uart0 = Serial;
 // Preallocate the 1st and 2nd PWM channel and overwrite with camera,
 // in order to avoid channel conflict
@@ -38,10 +24,6 @@ Servo s_prealloc0;
 Servo s_prealloc1;
 Servo s_pitch;
 Servo s_yaw;
-
-void net_asm();
-esp_err_t cam_init();
-void startCameraServer();
 
 void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
@@ -76,6 +58,7 @@ void setup() {
     WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
+	WiFi.setSleep(false);
     WiFi.setHostname(hostname);
 	// TODO: Realize permanent config over serial or hotspot
 #ifdef WLAN_UART_CONFIGURABLE
@@ -146,12 +129,16 @@ void setup() {
 }
 
 void loop() {
-	// put your main code here, to run repeatedly:
-	delay(10000);
+	if(camera_is_inited && !isStreaming) {
+		time(&ts);
+		if(ts - ts_camera_open > CAM_IDLE_TIME_MAX) {
+			if(esp_camera_deinit() == ESP_OK) camera_is_inited = false;
+		}
+	}
+	delay(500);
 }
 
 esp_err_t cam_init() {
-	camera_config_t config;
 	config.ledc_channel = LEDC_CHANNEL_0;
 	config.ledc_timer = LEDC_TIMER_0;
 	config.pin_d0 = Y2_GPIO_NUM;
@@ -174,12 +161,15 @@ esp_err_t cam_init() {
 //  config.xclk_freq_hz = 8000000;
 	config.pixel_format = PIXFORMAT_JPEG;
 	
+	/*
 	// if PSRAM IC present, init with UXGA resolution and higher JPEG quality
 	//                      for larger pre-allocated frame buffer.
 	if(psramFound()){
+	*/
 		config.frame_size = FRAMESIZE_UXGA;
 		config.jpeg_quality = 10;
 		config.fb_count = 2;
+	/*
 	} else {
 		config.frame_size = FRAMESIZE_SVGA;
 		config.jpeg_quality = 12;
@@ -190,22 +180,23 @@ esp_err_t cam_init() {
 	pinMode(13, INPUT_PULLUP);
 	pinMode(14, INPUT_PULLUP);
 #endif
+	*/
 
-	// camera init
 	esp_err_t err = esp_camera_init(&config);
-	if (err != ESP_OK) {
-		return err;
-	}
-	sensor_t * s = esp_camera_sensor_get();
+	if (err != ESP_OK) return err;
+	sensor_t *s = esp_camera_sensor_get();
+	/*
 	// initial sensors are flipped vertically and colors are a bit saturated
 	if (s->id.PID == OV3660_PID) {
 		s->set_vflip(s, 1); // flip it back
 		s->set_brightness(s, 1); // up the brightness just a bit
 		s->set_saturation(s, -1); // lower the saturation
 	}
+	*/
 	// drop down frame size for higher initial frame rate
 	s->set_framesize(s, FRAMESIZE_SVGA);
 	s->set_quality(s, 10);
+	/*
 	// s->set_hmirror(s, 1);
 	// s->set_vflip(s, 1);
 
@@ -213,5 +204,20 @@ esp_err_t cam_init() {
 	s->set_vflip(s, 1);
 	s->set_hmirror(s, 1);
 #endif
+	*/
+	camera_is_inited = true;
+	time(&ts_camera_open);
+	return ESP_OK;
+}
+
+esp_err_t cam_reinit() {
+	if(camera_is_inited) return ESP_ERR_CAMERA_BASE;
+	esp_err_t err = esp_camera_init(&config);
+	if (err != ESP_OK) return err;
+	sensor_t *s = esp_camera_sensor_get();
+	s->set_framesize(s, FRAMESIZE_SVGA);
+	s->set_quality(s, 10);
+	camera_is_inited = true;
+	time(&ts_camera_open);
 	return ESP_OK;
 }

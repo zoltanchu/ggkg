@@ -11,26 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#include "Arduino.h"
+#include "main.h"
 #include "esp_http_server.h"
 #include "esp_timer.h"
-#include "esp_camera.h"
+// #include "esp_camera.h"
 #include "img_converters.h"
 #include "fb_gfx.h"
 #include "driver/ledc.h"
 #include "camera_index.h"
 #include "sdkconfig.h"
-#include "ESP32Servo.h"
+// #include "ESP32Servo.h"
+#include "Update.h"
 #include "config.h"
 #define CONFIG_LED_ILLUMINATOR_ENABLED
 #define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
 #define CONFIG_LED_MAX_INTENSITY 255
 #define CONFIG_ESP_FACE_DETECT_ENABLED 1
 #define CONFIG_ESP_FACE_RECOGNITION_ENABLED 1
-
-extern uint8_t flash_br;
-extern Servo s_pitch;
-extern Servo s_yaw;
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -63,7 +60,6 @@ static const char *TAG = "camera_httpd";
 
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
 int led_duty = 0;
-bool isStreaming = false;
 #ifdef CONFIG_LED_LEDC_LOW_SPEED_MODE
 #define CONFIG_LED_LEDC_SPEED_MODE LEDC_LOW_SPEED_MODE
 #else
@@ -300,6 +296,7 @@ void enable_led(bool en)
 
 static esp_err_t bmp_handler(httpd_req_t *req)
 {
+    if(!camera_is_inited) cam_reinit();
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
     uint64_t fr_start = esp_timer_get_time();
@@ -353,6 +350,10 @@ static size_t jpg_encode_stream(void *arg, size_t index, const void *data, size_
 
 static esp_err_t capture_handler(httpd_req_t *req)
 {
+    if(!camera_is_inited) {
+        cam_reinit();
+        delay(2000);
+    }
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
     int64_t fr_start = esp_timer_get_time();
@@ -470,6 +471,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
 
 static esp_err_t stream_handler(httpd_req_t *req)
 {
+    if(!camera_is_inited) cam_reinit();
     camera_fb_t *fb = NULL;
     struct timeval _timestamp;
     esp_err_t res = ESP_OK;
@@ -502,9 +504,9 @@ static esp_err_t stream_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     httpd_resp_set_hdr(req, "X-Framerate", "60");
 
+    isStreaming = true;
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(true);
-    isStreaming = true;
 #endif
 
     while (true)
@@ -674,8 +676,9 @@ static esp_err_t stream_handler(httpd_req_t *req)
         );
     }
 
-#ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     isStreaming = false;
+    time(&ts_camera_open);
+#ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(false);
 #endif
 
@@ -724,6 +727,7 @@ static esp_err_t cmd_handler(httpd_req_t *req)
 
     int val = atoi(value);
     ESP_LOGI(TAG, "%s = %d", variable, val);
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = 0;
 
@@ -846,6 +850,7 @@ static esp_err_t status_handler(httpd_req_t *req)
 {
     static char json_response[1024];
 
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     char *p = json_response;
     *p++ = '{';
@@ -946,6 +951,7 @@ static esp_err_t xclk_handler(httpd_req_t *req)
     int xclk = atoi(_xclk);
     ESP_LOGI(TAG, "Set XCLK: %d MHz", xclk);
 
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
     if (res) {
@@ -980,6 +986,7 @@ static esp_err_t reg_handler(httpd_req_t *req)
     int val = atoi(_val);
     ESP_LOGI(TAG, "Set Register: reg: 0x%02x, mask: 0x%02x, value: 0x%02x", reg, mask, val);
 
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_reg(s, reg, mask, val);
     if (res) {
@@ -1009,6 +1016,7 @@ static esp_err_t greg_handler(httpd_req_t *req)
 
     int reg = atoi(_reg);
     int mask = atoi(_mask);
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->get_reg(s, reg, mask);
     if (res < 0) {
@@ -1050,6 +1058,7 @@ static esp_err_t pll_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Pll: bypass: %d, mul: %d, sys: %d, root: %d, pre: %d, seld5: %d, pclken: %d, pclk: %d", bypass, mul, sys, root, pre, seld5, pclken, pclk);
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
     if (res) {
@@ -1083,6 +1092,7 @@ static esp_err_t win_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Window: Start: %d %d, End: %d %d, Offset: %d %d, Total: %d %d, Output: %d %d, Scale: %u, Binning: %u", startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
     if (res) {
@@ -1098,16 +1108,22 @@ static esp_err_t index_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
+    /*
     if (s != NULL) {
         if (s->id.PID == OV3660_PID) {
             return httpd_resp_send(req, (const char *)index_ov3660_html_gz, index_ov3660_html_gz_len);
         } else if (s->id.PID == OV5640_PID) {
             return httpd_resp_send(req, (const char *)index_ov5640_html_gz, index_ov5640_html_gz_len);
         } else {
+    */
             return httpd_resp_send(req, (const char *)index_ov2640_html_gz, index_ov2640_html_gz_len);
+    /*
         }
     } else {
+    */
+    if(s == NULL) {
         ESP_LOGE(TAG, "Camera sensor not found");
         return httpd_resp_send_500(req);
     }
@@ -1133,6 +1149,14 @@ void startCameraServer()
             return httpd_resp_send(req, (const char *)favicon_ico_gz, favicon_ico_gz_len);
         },
         .user_ctx = NULL};
+
+    /*
+    httpd_uri_t ota_uri = {
+        .uri = "/ota",
+        .method = HTTP_POST,
+        .handler = []() {},
+        .user_ctx = NULL};
+    */
 
     httpd_uri_t status_uri = {
         .uri = "/status",
