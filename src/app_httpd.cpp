@@ -296,6 +296,7 @@ void enable_led(bool en)
 
 static esp_err_t bmp_handler(httpd_req_t *req)
 {
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
@@ -350,9 +351,11 @@ static size_t jpg_encode_stream(void *arg, size_t index, const void *data, size_
 
 static esp_err_t capture_handler(httpd_req_t *req)
 {
+    time(&ts_camera_open);
     if(!camera_is_inited) {
+        time(&ts);
         cam_reinit();
-        delay(2000);
+        delay(3000);
     }
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
@@ -471,6 +474,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
 
 static esp_err_t stream_handler(httpd_req_t *req)
 {
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     camera_fb_t *fb = NULL;
     struct timeval _timestamp;
@@ -727,6 +731,7 @@ static esp_err_t cmd_handler(httpd_req_t *req)
 
     int val = atoi(value);
     ESP_LOGI(TAG, "%s = %d", variable, val);
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = 0;
@@ -850,6 +855,7 @@ static esp_err_t status_handler(httpd_req_t *req)
 {
     static char json_response[1024];
 
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     char *p = json_response;
@@ -951,6 +957,7 @@ static esp_err_t xclk_handler(httpd_req_t *req)
     int xclk = atoi(_xclk);
     ESP_LOGI(TAG, "Set XCLK: %d MHz", xclk);
 
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
@@ -986,6 +993,7 @@ static esp_err_t reg_handler(httpd_req_t *req)
     int val = atoi(_val);
     ESP_LOGI(TAG, "Set Register: reg: 0x%02x, mask: 0x%02x, value: 0x%02x", reg, mask, val);
 
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_reg(s, reg, mask, val);
@@ -1016,6 +1024,7 @@ static esp_err_t greg_handler(httpd_req_t *req)
 
     int reg = atoi(_reg);
     int mask = atoi(_mask);
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->get_reg(s, reg, mask);
@@ -1058,6 +1067,7 @@ static esp_err_t pll_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Pll: bypass: %d, mul: %d, sys: %d, root: %d, pre: %d, seld5: %d, pclken: %d, pclk: %d", bypass, mul, sys, root, pre, seld5, pclken, pclk);
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
@@ -1092,6 +1102,7 @@ static esp_err_t win_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Window: Start: %d %d, End: %d %d, Offset: %d %d, Total: %d %d, Output: %d %d, Scale: %u, Binning: %u", startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
@@ -1108,6 +1119,7 @@ static esp_err_t index_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     /*

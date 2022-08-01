@@ -28,6 +28,7 @@ extern time_t ts, ts_camera_open;
 
 void net_asm();
 esp_err_t cam_init();
+esp_err_t cam_deinit();
 esp_err_t cam_reinit();
 void startCameraServer();
 

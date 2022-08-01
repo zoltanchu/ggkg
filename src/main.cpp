@@ -4,6 +4,7 @@
 #include <ESP32Servo.h>
 #include <WiFi.h>
 #include "camera_pins.h"
+// #include "soc/rtc.h"
 
 const char *ntp_server1 = "pool.ntp.org";
 const char *ntp_server2 = "time.nist.gov";
@@ -123,12 +124,23 @@ void setup() {
 	uart0.print("done, http://");
 	uart0.print(WiFi.localIP());
 	uart0.println(".");
+	time(&ts);
+	esp_sleep_enable_timer_wakeup(100e3);
 
 	digitalWrite(LED_BUILTIN, HIGH);
 	analogWrite(LED_FLASH, flash_br);
 }
 
 void loop() {
+	/* Auto sleep after 30s idle
+	if(!isStreaming) {
+		time(&ts);
+		if(ts - ts_camera_open > CAM_IDLE_TIME_MAX) {
+			esp_light_sleep_start();
+		}
+	}
+	*/
+	/* Auto close camera after 30s idle
 	if(camera_is_inited && !isStreaming) {
 		time(&ts);
 		if(ts - ts_camera_open > CAM_IDLE_TIME_MAX) {
@@ -136,6 +148,8 @@ void loop() {
 		}
 	}
 	delay(500);
+	*/
+	delay(60000);
 }
 
 esp_err_t cam_init() {
@@ -208,6 +222,12 @@ esp_err_t cam_init() {
 	camera_is_inited = true;
 	time(&ts_camera_open);
 	return ESP_OK;
+}
+
+esp_err_t cam_deinit() {
+	if(!camera_is_inited) return ESP_ERR_CAMERA_BASE;
+	esp_err_t err = esp_camera_deinit();
+	return err;
 }
 
 esp_err_t cam_reinit() {
