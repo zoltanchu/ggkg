@@ -55,7 +55,7 @@ void setup() {
 		analogWrite(LED_FLASH, 63);
 	}
 
-	// comment the line below if you needn't fixed IP
+	// comment the line below if you needn't static IP
     WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
