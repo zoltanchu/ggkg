@@ -21,10 +21,11 @@ camera_config_t config;
 HardwareSerial uart0 = Serial;
 // Preallocate the 1st and 2nd PWM channel and overwrite with camera,
 // in order to avoid channel conflict
-Servo s_prealloc0;
-Servo s_prealloc1;
+//Servo s_prealloc0;
+//Servo s_prealloc1;
 Servo s_pitch;
 Servo s_yaw;
+WireGuard wg;
 
 void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
@@ -37,8 +38,8 @@ void setup() {
 	uart0.println();
 
     uart0.print("Attaching servo: ");
-	s_prealloc0.attach(SERVO_PITCH);
-	s_prealloc1.attach(SERVO_PITCH);
+	// s_prealloc0.attach(SERVO_PITCH);
+	// s_prealloc1.attach(SERVO_PITCH);
     uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH));
 	s_pitch.write(pitch_default);
     uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW));
@@ -56,7 +57,7 @@ void setup() {
 	}
 
 	// comment the line below if you needn't static IP
-    WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
+    //WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
 	WiFi.setSleep(false);
@@ -101,9 +102,9 @@ void setup() {
 		WiFi.begin((const char *) _ssid, (const char *) _pass);
 	} else {
 #endif
-		uart0.print("Connecting to wlreless LAN ");
-		uart0.print(ssid);
-		uart0.print(": ");
+		uart0.print("Connecting to wlreless LAN: ");
+		uart0.println(ssid);
+		// uart0.print(": ");
 		// TODO: online config over serial, bluetooth
 		WiFi.begin(ssid, password);
 #ifdef WLAN_UART_CONFIGURABLE
@@ -111,13 +112,32 @@ void setup() {
 #endif
     if(WiFi.waitForConnectResult() == WL_CONNECTED) {
 		Serial.println("done.");
+	} else {
+		// uart0.println("failed.");
+		while( !WiFi.isConnected() ) {
+			uart0.println("Wifi is not connected.");
+			digitalWrite(LED_FLASH, HIGH);
+			delay(500);
+			digitalWrite(LED_FLASH, LOW);
+			delay(500);
+		}
 	}
-    else {
-		digitalWrite(LED_FLASH, HIGH);
-		uart0.println("failed.");
-		delay(20);
-		digitalWrite(LED_FLASH, LOW);
-	}
+
+	uart0.print("Start configTime: ");
+	configTime(8 * 60 * 60, 0, ntp_server1, ntp_server2, ntp_server3);
+	uart0.println("done.");
+
+	uart0.print("Start wg: ");
+	wg.begin(
+    	wg_local_ip,           // IP address of the local interface
+    	wg_private_key,        // Private key of the local interface
+    	wg_endpoint_address,   // Address of the endpoint peer.
+    	wg_public_key,         // Public key of the endpoint peer.
+    	wg_endpoint_port);     // Port pf the endpoint peer.
+	if (wg.is_initialized())
+		uart0.println("done.");
+	else
+		uart0.println("not initialized.");
 
 	uart0.print("Starting web server: ");
 	startCameraServer();
@@ -153,7 +173,7 @@ void loop() {
 }
 
 esp_err_t cam_init() {
-	config.ledc_channel = LEDC_CHANNEL_0;
+	config.ledc_channel = LEDC_CHANNEL_2;
 	config.ledc_timer = LEDC_TIMER_0;
 	config.pin_d0 = Y2_GPIO_NUM;
 	config.pin_d1 = Y3_GPIO_NUM;

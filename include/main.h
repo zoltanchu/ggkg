@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "esp_camera.h"
 #include <ESP32Servo.h>
+#include <WireGuard-ESP32.h>
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 
 #define WLAN_CONN_TIME_MAX  10e3
@@ -25,6 +26,7 @@ extern camera_config_t config;
 extern Servo s_pitch;
 extern Servo s_yaw;
 extern time_t ts, ts_camera_open;
+extern WireGuard wg;
 
 void net_asm();
 esp_err_t cam_init();
