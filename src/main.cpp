@@ -63,7 +63,9 @@ void setup() {
 	}
 
 	// comment the line below if you needn't static IP
-    //WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
+#if WIFI_USE_STATIC_IP
+    WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
+#endif
     WiFi.setAutoConnect(true);
     WiFi.setAutoReconnect(true);
 	WiFi.setSleep(false);
@@ -120,11 +122,11 @@ void setup() {
 		Serial.println("done.");
 	} else {
 		// uart0.println("failed.");
-		while( !WiFi.isConnected() ) {
+		while(! WiFi.isConnected()) {
 			uart0.println("Wifi is not connected.");
-			digitalWrite(LED_FLASH, HIGH);
+			analogWrite(LED_FLASH, 10);
 			delay(500);
-			digitalWrite(LED_FLASH, LOW);
+			analogWrite(LED_FLASH, 0);
 			delay(500);
 		}
 	}
