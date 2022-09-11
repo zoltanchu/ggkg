@@ -234,7 +234,7 @@ esp_err_t cam_init() {
 	}
 	*/
 	// drop down frame size for higher initial frame rate
-	s->set_framesize(s, FRAMESIZE_SVGA);
+	s->set_framesize(s, FRAMESIZE_QVGA);
 	s->set_quality(s, 10);
 	/*
 	// s->set_hmirror(s, 1);
