@@ -27,6 +27,8 @@ extern Servo s_pitch;
 extern Servo s_yaw;
 extern time_t ts, ts_camera_open;
 extern WireGuard wg;
+extern char hostmsg[];
+extern char *hostamsg;
 
 void net_asm();
 esp_err_t cam_init();

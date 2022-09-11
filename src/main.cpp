@@ -27,11 +27,17 @@ Servo s_pitch;
 Servo s_yaw;
 WireGuard wg;
 
+char hostmsg[256];
+char *hostamsg = hostmsg;
+
 void setup() {
 	pinMode(LED_BUILTIN, OUTPUT);
 	pinMode(LED_FLASH, OUTPUT);
 
 	digitalWrite(LED_BUILTIN, LOW);
+
+	strcpy(hostmsg, hostname);
+	hostamsg = hostmsg + strlen(hostmsg);
 
 	uart0.begin(115200);
 	uart0.setDebugOutput(true);
