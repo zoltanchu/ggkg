@@ -23,8 +23,6 @@
 // #include "ESP32Servo.h"
 #include "Update.h"
 #include "config.h"
-
-#include <sys/socket.h>
 //#define CONFIG_LED_ILLUMINATOR_ENABLED
 #define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
 #define CONFIG_LED_MAX_INTENSITY 255
@@ -511,18 +509,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "X-Framerate", "60");
 
     isStreaming = true;
-    
-    char *ipstr = nullptr;
-
-    sockaddr_in sockaddr;
-    socklen_t sockaddrlen = sizeof(sockaddr);
-    int sockfd = httpd_req_to_sockfd(req);
-    if (sockfd >= 0 && getpeername(sockfd, (struct sockaddr *)&sockaddr, &sockaddrlen) >= 0) {
-        ipstr = inet_ntoa(sockaddr.sin_addr);
-    }
-
-    sprintf(hostamsg, " [Currently streaming to host %s]", ipstr);
-    ipstr = nullptr;
+    sprintf(hostamsg, " [Streaming]");
 
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(true);
