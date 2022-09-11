@@ -67,7 +67,8 @@ void setup() {
     WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
 #endif
     WiFi.setAutoConnect(true);
-    WiFi.setAutoReconnect(true);
+    //WiFi.setAutoReconnect(true);
+	//WiFi.persistent(true);
 	WiFi.setSleep(false);
     WiFi.setHostname(hostname);
 	// TODO: Realize permanent config over serial or hotspot
@@ -171,7 +172,8 @@ void loop() {
 		wg.end();
 		uart0.println("done.");
 		uart0.println("Reconnect wifi.");
-		WiFi.reconnect();
+		WiFi.disconnect();
+		WiFi.begin(ssid, password);
 	}
 	if (WiFi.isConnected() && ! wg.is_initialized()) {
 		uart0.println("Wifi connection established.");
