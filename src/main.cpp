@@ -133,18 +133,6 @@ void setup() {
 	configTime(8 * 60 * 60, 0, ntp_server1, ntp_server2, ntp_server3);
 	uart0.println("done.");
 
-	uart0.print("Start wg: ");
-	wg.begin(
-    	wg_local_ip,           // IP address of the local interface
-    	wg_private_key,        // Private key of the local interface
-    	wg_endpoint_address,   // Address of the endpoint peer.
-    	wg_public_key,         // Public key of the endpoint peer.
-    	wg_endpoint_port);     // Port pf the endpoint peer.
-	if (wg.is_initialized())
-		uart0.println("done.");
-	else
-		uart0.println("not initialized.");
-
 	uart0.print("Starting web server: ");
 	startCameraServer();
 	uart0.print("done, http://");
@@ -175,7 +163,30 @@ void loop() {
 	}
 	delay(500);
 	*/
-	delay(60000);
+	if (! WiFi.isConnected() && wg.is_initialized()) {
+		uart0.println("Wifi connection down.");
+		uart0.print("End wg: ");
+		wg.end();
+		uart0.println("done.");
+		uart0.println("Reconnect wifi.");
+		WiFi.reconnect();
+	}
+	if (WiFi.isConnected() && ! wg.is_initialized()) {
+		uart0.println("Wifi connection established.");
+		uart0.print("Start wg: ");
+		wg.begin(
+			wg_local_ip,           // IP address of the local interface
+			wg_private_key,        // Private key of the local interface
+			wg_endpoint_address,   // Address of the endpoint peer.
+			wg_public_key,         // Public key of the endpoint peer.
+			wg_endpoint_port);     // Port pf the endpoint peer.
+		if (wg.is_initialized())
+			uart0.println("done.");
+		else
+			uart0.println("initialize failed.");
+	}
+
+	delay(10000);
 }
 
 esp_err_t cam_init() {
