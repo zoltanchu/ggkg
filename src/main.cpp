@@ -1,6 +1,7 @@
 #include "main.h"
 #include "config.h"
 #include "time.h"
+#include "esp_sntp.h"
 #include <ESP32Servo.h>
 #include <WiFi.h>
 #include "camera_pins.h"
@@ -119,21 +120,27 @@ void setup() {
 #ifdef WLAN_UART_CONFIGURABLE
 	}
 #endif
-    if(WiFi.waitForConnectResult() == WL_CONNECTED) {
-		Serial.println("done.");
-	} else {
-		// uart0.println("failed.");
+	analogWrite(LED_FLASH, 0);
+    if(WiFi.waitForConnectResult() != WL_CONNECTED) {
 		while(! WiFi.isConnected()) {
 			uart0.println("Wifi is not connected.");
-			analogWrite(LED_FLASH, 10);
+			digitalWrite(LED_BUILTIN, LOW);
 			delay(500);
-			analogWrite(LED_FLASH, 0);
+			digitalWrite(LED_BUILTIN, HIGH);
 			delay(500);
 		}
 	}
+	uart0.println("done.");
 
-	uart0.print("Start configTime: ");
+	uart0.print("Start sync time: ");
 	configTime(8 * 60 * 60, 0, ntp_server1, ntp_server2, ntp_server3);
+	while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) {
+		uart0.println("SNTP is not completed.");
+		digitalWrite(LED_BUILTIN, LOW);
+		delay(500);
+		digitalWrite(LED_BUILTIN, HIGH);
+		delay(500);
+	}
 	uart0.println("done.");
 
 	uart0.print("Starting web server: ");
