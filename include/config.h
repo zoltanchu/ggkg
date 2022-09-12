@@ -2,7 +2,7 @@
 #define __CONFIG_H__
 #include "Arduino.h"
 
-#define WIFI_USE_STATIC_IP 0
+#define SET_WIFI_USE_STATIC_IP 0
 
 extern int pitch_default;
 extern int yaw_default;
@@ -10,7 +10,7 @@ extern const char *hostname;
 extern const char *ssid;
 extern const char *password;
 
-#if WIFI_USE_STATIC_IP
+#if SET_WIFI_USE_STATIC_IP
 extern IPAddress local_ip;
 extern IPAddress netmask;
 extern IPAddress gateway;

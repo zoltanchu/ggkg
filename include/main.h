@@ -1,6 +1,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+// #define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_DEBUG
+
 #include <Arduino.h>
 #include "esp_camera.h"
 #include <ESP32Servo.h>

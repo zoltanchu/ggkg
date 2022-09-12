@@ -10,7 +10,9 @@
 const char *ntp_server1 = "pool.ntp.org";
 const char *ntp_server2 = "time.nist.gov";
 const char *ntp_server3 = "cn.ntp.org.cn";
-const char *timezone = "HKT-8";
+// const char *timezone = "HKT-8";
+const long gmtOffset_sec = 8 * 60 * 60;
+const int daylightOffset_sec = 0;
 
 bool camera_is_inited = false, isStreaming = false;
 uint8_t flash_br = 0;
@@ -31,7 +33,11 @@ WireGuard wg;
 char hostmsg[256];
 char *hostamsg = hostmsg;
 
+bool r_wifi = false;
+
 void setup() {
+	// esp_log_level_set("*", ESP_LOG_DEBUG);
+
 	pinMode(LED_BUILTIN, OUTPUT);
 	pinMode(LED_FLASH, OUTPUT);
 
@@ -64,7 +70,7 @@ void setup() {
 	}
 
 	// comment the line below if you needn't static IP
-#if WIFI_USE_STATIC_IP
+#if SET_WIFI_USE_STATIC_IP
     WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
 #endif
     WiFi.setAutoConnect(true);
@@ -130,10 +136,10 @@ void setup() {
 			delay(500);
 		}
 	}
-	uart0.println("done.");
+	uart0.println("Wifi connection done.");
 
 	uart0.print("Start sync time: ");
-	configTime(8 * 60 * 60, 0, ntp_server1, ntp_server2, ntp_server3);
+	configTime(gmtOffset_sec, daylightOffset_sec, ntp_server1, ntp_server2, ntp_server3);
 	while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) {
 		uart0.println("SNTP is not completed.");
 		digitalWrite(LED_BUILTIN, LOW);
@@ -141,7 +147,13 @@ void setup() {
 		digitalWrite(LED_BUILTIN, HIGH);
 		delay(500);
 	}
-	uart0.println("done.");
+	struct tm time_n;
+	if (! getLocalTime(&time_n))
+		uart0.println("Fail to get local time.");
+	uart0.print("SNTP sync done: ");
+	uart0.println(&time_n, "%B %d %Y %H:%M:%S");
+
+	r_wifi = true;
 
 	uart0.print("Starting web server: ");
 	startCameraServer();
@@ -173,31 +185,45 @@ void loop() {
 	}
 	delay(500);
 	*/
-	if (! WiFi.isConnected() && wg.is_initialized()) {
+	if (! WiFi.isConnected() && ! r_wifi) {
 		uart0.println("Wifi connection down.");
-		uart0.print("End wg: ");
-		wg.end();
-		uart0.println("done.");
 		uart0.println("Reconnect wifi.");
 		WiFi.disconnect();
 		WiFi.begin(ssid, password);
+		r_wifi = true;
 	}
-	if (WiFi.isConnected() && ! wg.is_initialized()) {
+	if (WiFi.isConnected() && r_wifi) {
 		uart0.println("Wifi connection established.");
-		uart0.print("Start wg: ");
-		wg.begin(
-			wg_local_ip,           // IP address of the local interface
-			wg_private_key,        // Private key of the local interface
-			wg_endpoint_address,   // Address of the endpoint peer.
-			wg_public_key,         // Public key of the endpoint peer.
-			wg_endpoint_port);     // Port pf the endpoint peer.
-		if (wg.is_initialized())
-			uart0.println("done.");
-		else
-			uart0.println("initialize failed.");
+		if (! wg.is_initialized()) {
+			// Stop wg when wifi reconnected to avoid core panic
+			//uart0.print("Stop old wg connection: ");
+			//wg.end();
+			//uart0.println("done.");
+			// do not need to restart?
+			uart0.print("Start wg: ");
+			if (wg.begin(
+				wg_local_ip,           // IP address of the local interface
+				wg_private_key,        // Private key of the local interface
+				wg_endpoint_address,   // Address of the endpoint peer.
+				wg_public_key,         // Public key of the endpoint peer.
+				wg_endpoint_port))     // Port pf the endpoint peer.
+				uart0.println("done.");
+			else
+				uart0.println("initialize failed.");
+		}
+		r_wifi = false;
 	}
 
-	delay(10000);
+	if (! WiFi.isConnected() || r_wifi) {
+		uart0.printf("Wifi status: %x", WiFi.status());
+		uart0.println();
+		digitalWrite(LED_BUILTIN, LOW);
+		delay(1000);
+		digitalWrite(LED_BUILTIN, HIGH);
+		delay(1000);
+	} else {
+		delay(10000);
+	}
 }
 
 esp_err_t cam_init() {
