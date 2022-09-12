@@ -28,7 +28,12 @@ HardwareSerial uart0 = Serial;
 //Servo s_prealloc1;
 Servo s_pitch;
 Servo s_yaw;
+
+#if SET_WIREGUARD_ENABLE
+#include <WireGuard-ESP32.h>
+
 WireGuard wg;
+#endif
 
 char hostmsg[256];
 char *hostamsg = hostmsg;
@@ -147,11 +152,10 @@ void setup() {
 		digitalWrite(LED_BUILTIN, HIGH);
 		delay(500);
 	}
-	struct tm time_n;
-	if (! getLocalTime(&time_n))
+	if (! getLocalTime(&struct_ts))
 		uart0.println("Fail to get local time.");
 	uart0.print("SNTP sync done: ");
-	uart0.println(&time_n, "%B %d %Y %H:%M:%S");
+	uart0.println(&struct_ts, "%B %d %Y %H:%M:%S");
 
 	r_wifi = true;
 
@@ -194,8 +198,8 @@ void loop() {
 	}
 	if (WiFi.isConnected() && r_wifi) {
 		uart0.println("Wifi connection established.");
+#if SET_WIREGUARD_ENABLE
 		if (! wg.is_initialized()) {
-			// Stop wg when wifi reconnected to avoid core panic
 			//uart0.print("Stop old wg connection: ");
 			//wg.end();
 			//uart0.println("done.");
@@ -211,6 +215,7 @@ void loop() {
 			else
 				uart0.println("initialize failed.");
 		}
+#endif
 		r_wifi = false;
 	}
 
