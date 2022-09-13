@@ -38,7 +38,7 @@ WireGuard wg;
 char hostmsg[256];
 char *hostamsg = hostmsg;
 
-bool r_wifi = false;
+int r_wifi = 0;
 
 void setup() {
 	// esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -157,7 +157,7 @@ void setup() {
 	uart0.print("SNTP sync done: ");
 	uart0.println(&struct_ts, "%B %d %Y %H:%M:%S");
 
-	r_wifi = true;
+	r_wifi = 10;
 
 	uart0.print("Starting web server: ");
 	startCameraServer();
@@ -194,7 +194,7 @@ void loop() {
 		uart0.println("Reconnect wifi.");
 		WiFi.disconnect();
 		WiFi.begin(ssid, password);
-		r_wifi = true;
+		r_wifi = 1500; // Recall WiFi.begin every 5mins;
 	}
 	if (WiFi.isConnected() && r_wifi) {
 		uart0.println("Wifi connection established.");
@@ -216,7 +216,7 @@ void loop() {
 				uart0.println("initialize failed.");
 		}
 #endif
-		r_wifi = false;
+		r_wifi = 0;
 	}
 
 	if (! WiFi.isConnected() || r_wifi) {
@@ -226,6 +226,7 @@ void loop() {
 		delay(1000);
 		digitalWrite(LED_BUILTIN, HIGH);
 		delay(1000);
+		if (r_wifi > 0) r_wifi--;
 	} else {
 		delay(10000);
 	}
