@@ -1,6 +1,8 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
 
+// #define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_DEBUG
+
 #include <Arduino.h>
 #include "esp_camera.h"
 #include <ESP32Servo.h>
@@ -25,6 +27,8 @@ extern camera_config_t config;
 extern Servo s_pitch;
 extern Servo s_yaw;
 extern time_t ts, ts_camera_open;
+extern char hostmsg[];
+extern char *hostamsg;
 
 void net_asm();
 esp_err_t cam_init();
