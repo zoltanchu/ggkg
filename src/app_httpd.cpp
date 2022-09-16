@@ -511,6 +511,8 @@ static esp_err_t stream_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "X-Framerate", "60");
 
     isStreaming = true;
+    sprintf(hostamsg, " [Streaming]");
+
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(true);
 #endif
@@ -683,6 +685,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
     }
 
     isStreaming = false;
+    *hostamsg = '\0';
     time(&ts_camera_open);
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(false);
@@ -742,8 +745,7 @@ static esp_err_t cmd_handler(httpd_req_t *req)
         if (s->pixformat == PIXFORMAT_JPEG) {
             res = s->set_framesize(s, (framesize_t)val);
         }
-    }
-    else if (!strcmp(variable, "flash")) {
+    } else if (!strcmp(variable, "flash")) {
         if(flash_br < val)
             for(; flash_br < val; flash_br++) {
                 analogWrite(4, flash_br);
@@ -755,12 +757,13 @@ static esp_err_t cmd_handler(httpd_req_t *req)
                 delay(3);
             }
         analogWrite(4, flash_br);
-    }
-    else if (!strcmp(variable, "pitch"))
+    } else if (!strcmp(variable, "pitch")) {
         s_pitch.write(val);
-    else if (!strcmp(variable, "yaw"))
+        res = s_pitch.read();
+    } else if (!strcmp(variable, "yaw")) {
         s_yaw.write(val);
-    else if (!strcmp(variable, "reset"))
+        res = s_yaw.read();
+    } else if (!strcmp(variable, "reset"))
         ESP.restart();
     else if (!strcmp(variable, "quality"))
         res = s->set_quality(s, val);
@@ -892,7 +895,7 @@ static esp_err_t status_handler(httpd_req_t *req)
         p+=print_reg(p, s, 0x132, 0xFF);
     }
 
-    p += sprintf(p, "\"hostname\":\"%s\",", hostname);
+    p += sprintf(p, "\"hostname\":\"%s\",", hostmsg);
     p += sprintf(p, "\"pitch\":%u,", s_pitch.read());
     p += sprintf(p, "\"yaw\":%u,", s_yaw.read());
     p += sprintf(p, "\"flash\":%u,", flash_br);
@@ -1143,6 +1146,38 @@ static esp_err_t index_handler(httpd_req_t *req)
     }
 }
 
+static esp_err_t silent_handler(httpd_req_t *req) {
+    char *buf = NULL;
+
+    if (parse_get(req, &buf) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    int a_pitch = parse_get_var(buf, "pitch", -1);
+    int a_yaw = parse_get_var(buf, "yaw", -1);
+    int intrv_ms = parse_get_var(buf, "interval", 6);
+    bool done_pitch = a_pitch < 0;
+    bool done_yaw = a_yaw < 0;
+    if(!done_pitch || !done_yaw)
+        while(1) {
+            if(!done_pitch) {
+                if(s_pitch.read() < a_pitch) s_pitch.write(s_pitch.read() + 1);
+                else if(s_pitch.read() > a_pitch) s_pitch.write(s_pitch.read() - 1);
+                else done_pitch = true;
+            }
+            if(!done_yaw) {
+                if(s_yaw.read() < a_yaw) s_yaw.write(s_yaw.read() + 1);
+                else if(s_yaw.read() > a_yaw) s_yaw.write(s_yaw.read() - 1);
+                else done_yaw = true;
+            }
+            if(done_pitch && done_yaw) break;
+            delay(intrv_ms);
+        }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, "{}", 2);
+}
+
 void startCameraServer()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -1232,6 +1267,12 @@ void startCameraServer()
         .handler = win_handler,
         .user_ctx = NULL};
 
+    httpd_uri_t silent_uri = {
+        .uri = "/silent",
+        .method = HTTP_GET,
+        .handler = silent_handler,
+        .user_ctx = NULL};
+
     ra_filter_init(&ra_filter, 20);
 
 #if CONFIG_ESP_FACE_DETECT_ENABLED
@@ -1273,6 +1314,7 @@ void startCameraServer()
         httpd_register_uri_handler(camera_httpd, &pll_uri);
         httpd_register_uri_handler(camera_httpd, &win_uri);
         httpd_register_uri_handler(camera_httpd, &stream_uri);
+        httpd_register_uri_handler(camera_httpd, &silent_uri);
     }
 
     config.server_port += 1;
