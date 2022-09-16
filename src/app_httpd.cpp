@@ -23,10 +23,12 @@
 // #include "ESP32Servo.h"
 #include "Update.h"
 #include "config.h"
-#define CONFIG_LED_ILLUMINATOR_ENABLED
-#define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
-#define CONFIG_LED_MAX_INTENSITY 255
+// #define CONFIG_LED_ILLUMINATOR_ENABLED
+// #define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
+// #define CONFIG_LED_MAX_INTENSITY 255
+// If encountered "fd_*.h" not found, change the following value to 0
 #define CONFIG_ESP_FACE_DETECT_ENABLED 1
+// If encountered "fr_*.h" not found, change the following value to 0
 #define CONFIG_ESP_FACE_RECOGNITION_ENABLED 1
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)

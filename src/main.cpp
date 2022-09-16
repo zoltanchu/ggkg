@@ -19,10 +19,6 @@ tm struct_ts;
 
 camera_config_t config;
 HardwareSerial uart0 = Serial;
-// Preallocate the 1st and 2nd PWM channel and overwrite with camera,
-// in order to avoid channel conflict
-Servo s_prealloc0;
-Servo s_prealloc1;
 Servo s_pitch;
 Servo s_yaw;
 
@@ -37,8 +33,6 @@ void setup() {
 	uart0.println();
 
     uart0.print("Attaching servo: ");
-	s_prealloc0.attach(SERVO_PITCH);
-	s_prealloc1.attach(SERVO_PITCH);
     uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH));
 	s_pitch.write(pitch_default);
     uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW));
@@ -153,7 +147,8 @@ void loop() {
 }
 
 esp_err_t cam_init() {
-	config.ledc_channel = LEDC_CHANNEL_0;
+	// Reserve the first 2 channel for servos
+	config.ledc_channel = LEDC_CHANNEL_2;
 	config.ledc_timer = LEDC_TIMER_0;
 	config.pin_d0 = Y2_GPIO_NUM;
 	config.pin_d1 = Y3_GPIO_NUM;
