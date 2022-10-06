@@ -5,11 +5,15 @@
 
 #include <Arduino.h>
 #include "esp_camera.h"
+#include "esp_http_server.h"
+#include "nvs_flash.h"
 #include <ESP32Servo.h>
+#include "config.h"
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 
-#define WLAN_CONN_TIME_MAX  10e3
-#define CAM_IDLE_TIME_MAX   30
+#define SERVO_POWER_TIME_MAX    3e3
+#define WLAN_CONN_TIME_MAX      10e3
+#define CAM_IDLE_TIME_MAX       30
 
 #define LED_FLASH 4
 #define LED_BUILTIN 33
@@ -24,16 +28,20 @@
 extern bool camera_is_inited, isStreaming;
 extern uint8_t flash_br;
 extern camera_config_t config;
-extern Servo s_pitch;
-extern Servo s_yaw;
-extern time_t ts, ts_camera_open;
+extern HardwareSerial uart0;
+extern Servo s_pitch, s_yaw;
+extern time_t ts, ts_camera_open, ts_yaw, ts_pitch;
+extern String httpd_auth_b64;
 extern char hostmsg[];
 extern char *hostamsg;
+extern int a_pitch, a_yaw, intrv_ms;
+extern bool done_pitch, done_yaw;
 
 void net_asm();
 esp_err_t cam_init();
 esp_err_t cam_deinit();
 esp_err_t cam_reinit();
 void startCameraServer();
+esp_err_t stopCameraServer();
 
 #endif

@@ -23,9 +23,9 @@ Rename `src/config.cpp.example` to `src/config.cpp`, in this file there are seve
 
 `ssid` is the SSID, also known as the name of one Wi-Fi hotspot that GGKG should connect to, with password given by `password`.
 
-GGKG ask for a dynamic IP address in default. For a static IP address, set `#define SET_WIFI_USE_STATIC_IP 1` in `config.h`, then set `local_ip` as the static IP address, `netmask` and `gateway` as what you wish.
+GGKG ask for a dynamic IP address in default. For a static IP address, set macro `SET_WIFI_USE_STATIC_IP` to `1` in `src/config.h`, then set `local_ip` as the static IP address, `netmask` and `gateway` as what you wish.
 
-GGKG also support [wireguard](https://www.wireguard.com/). To enable it, set `#define SET_WIREGUARD_ENABLE   1` in `config.h`, then set `wg_local_ip` for wireguard interface address(netmask will be 255.255.255.255), `wg_private_key` for interface private key, `wg_endpoint_address` for endpoint address or domain, `wg_endpoint_port` for endpoint port, and `wg_public_key` for endpoint public key.
+GGKG also support [WireGuard (R)](https://www.wireguard.com/). To enable it, set macro `SET_WIREGUARD_ENABLE` to `1` in `src/config.h`, then set `wg_local_ip` for wireguard interface address(netmask will be 255.255.255.255), `wg_private_key` for interface private key, `wg_endpoint_address` for endpoint address or domain, `wg_endpoint_port` for endpoint port, and `wg_public_key` for endpoint public key.
 
 ## HTTP Web Server ##
 
@@ -33,12 +33,12 @@ GGKG provides web page at **root** of its web server. In `Settings Panel`, `Peri
 
 This gimbal project may be useful and can't be simpler. It's for our enjoyment.
 
-## Unstable of Wireguard Connection ##
+## Unstablity of WireGuard (R) Connection ##
 
-In some cases, say wifi reconnected after a period of connection lost, wireguard could be unable to reconnect. We found that the program would tring to send initralization requests continously but failed to receive any server response, and believe it is NAT network to be claim.
+In some cases, like Wi-Fi reconnection after a period of connection lost, WireGuard may not be able to reconnect. We found that the WireGuard-ESP32 attempted to send initalization requests continously without receiving any server response, and believe that the NAT is to blame for this issue.
 
-In general wireguard client, we set `PersistentKeepalive` to avoid such situation, quote [WireGuard Quick Start Manual](https://www.wireguard.com/quickstart/#nat-and-firewall-traversal-persistence) here:
+In general WireGuard client, we set `PersistentKeepAlive` to avoid such situation, quote [WireGuard Quick Start Manual](https://www.wireguard.com/quickstart/#nat-and-firewall-traversal-persistence) here:
 
->But if you're behind NAT or a firewall and you want to receive incoming connections long after network traffic has gone silent, this option will keep the "connection" open in the eyes of NAT.
+> But if you're behind NAT or a firewall and you want to receive incoming connections long after network traffic has gone silent, this option will keep the "connection" open in the eyes of NAT.
 
 For more information, refer to [this log](test/ggkg_wg_debug.md).

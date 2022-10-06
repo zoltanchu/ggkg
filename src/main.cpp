@@ -1,10 +1,15 @@
 #include "main.h"
-#include "config.h"
+#include "base64.h"
 #include "time.h"
 #include "esp_sntp.h"
 #include <ESP32Servo.h>
 #include <WiFi.h>
 #include "camera_pins.h"
+#include "sdkconfig.h"
+#include "persist.h"
+#if CONFIG_HTTPD_MAX_REQ_HDR_LEN <= 512
+#error "CONFIG_HTTPD_MAX_REQ_HDR_LEN is not configured."
+#endif
 // #include "soc/rtc.h"
 
 const char *ntp_server1 = "pool.ntp.org";
@@ -16,8 +21,9 @@ const int daylightOffset_sec = 0;
 
 bool camera_is_inited = false, isStreaming = false;
 uint8_t flash_br = 0;
+String httpd_auth_b64;
 String uart0_rbuf = "";
-time_t ts, ts_camera_open;
+time_t ts, ts_camera_open, ts_yaw, ts_pitch;
 tm struct_ts;
 
 camera_config_t config;
@@ -37,6 +43,8 @@ char hostmsg[256];
 char *hostamsg = hostmsg;
 
 int r_wifi = 0;
+int a_pitch, a_yaw, intrv_ms;
+bool done_pitch, done_yaw;
 
 void setup() {
     // esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -53,13 +61,18 @@ void setup() {
     uart0.setDebugOutput(true);
     uart0.println();
 
+    uart0.print("Initializing persistence: ");
+    persist_init();
+    uart0.println("done.");
     uart0.print("Attaching servo: ");
     s_p0.attach(SERVO_PITCH);
     s_p1.attach(SERVO_PITCH);
-    uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH));
+    uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH, 500, 2500));
     s_pitch.write(pitch_default);
-    uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW));
+    time(&ts_pitch);
+    uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW, 500, 2500));
     s_yaw.write(yaw_default);
+    time(&ts_yaw);
     uart0.println("done.");
     analogWrite(LED_FLASH, 10);
 
@@ -74,7 +87,7 @@ void setup() {
 
     // comment the line below if you needn't static IP
 #if SET_WIFI_USE_STATIC_IP
-    WiFi.config(local_ip, gateway, netmask, IPAddress(223, 5, 5, 5), gateway);
+    WiFi.config(IPAddress(local_ip), IPAddress(gateway), IPAddress(netmask), IPAddress(223, 5, 5, 5), IPAddress(gateway));
 #endif
     WiFi.setAutoConnect(true);
     //WiFi.setAutoReconnect(true);
@@ -141,6 +154,7 @@ void setup() {
     }
     uart0.println("Wifi connection done.");
 
+#if SET_WIREGUARD_ENABLE
     uart0.print("Start sync time: ");
     configTime(gmtOffset_sec, daylightOffset_sec, ntp_server1, ntp_server2, ntp_server3);
     while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) {
@@ -154,16 +168,27 @@ void setup() {
         uart0.println("Fail to get local time.");
     uart0.print("SNTP sync done: ");
     uart0.println(&struct_ts, "%B %d %Y %H:%M:%S");
+#endif
 
     r_wifi = 10;
 
+    /*
+    if(strlen(httpd_auth)) {
+        httpd_auth_b64 = base64::encode(httpd_auth);
+        uart0.print("Auth with ");
+        uart0.print(httpd_auth);
+        uart0.print(" (");
+        uart0.print(httpd_auth_b64);
+        uart0.println(").");
+    }
+    */
     uart0.print("Starting web server: ");
     startCameraServer();
     uart0.print("done, http://");
     uart0.print(WiFi.localIP());
     uart0.println(".");
     time(&ts);
-    esp_sleep_enable_timer_wakeup(100e3);
+    // esp_sleep_enable_timer_wakeup(100e3);
 
     digitalWrite(LED_BUILTIN, HIGH);
     analogWrite(LED_FLASH, flash_br);
@@ -172,7 +197,6 @@ void setup() {
 void loop() {
     /* Auto sleep after 30s idle
     if(!isStreaming) {
-        time(&ts);
         if(ts - ts_camera_open > CAM_IDLE_TIME_MAX) {
             esp_light_sleep_start();
         }
@@ -187,11 +211,48 @@ void loop() {
     }
     delay(500);
     */
+    time(&ts);
+    // silent mode
+    if(!done_pitch || !done_yaw) {
+        int curr_pitch = s_pitch.readMicroseconds();
+        int curr_yaw = s_yaw.readMicroseconds();
+        if(!s_pitch.attached()) s_pitch.attach(SERVO_PITCH);
+        time(&ts_pitch);
+        if(!s_yaw.attached()) s_yaw.attach(SERVO_YAW);
+        time(&ts_yaw);
+        while(1) {
+            if(!done_pitch) {
+                if(a_pitch - curr_pitch > 2) s_pitch.writeMicroseconds(++curr_pitch);
+                else if(curr_pitch - a_pitch > 2) s_pitch.writeMicroseconds(--curr_pitch);
+                else {
+                    // s_pitch.write(d_pitch);
+                    done_pitch = true;
+                }
+            }
+            if(!done_yaw) {
+                if(a_yaw - curr_yaw > 2) s_yaw.writeMicroseconds(++curr_yaw);
+                else if(curr_yaw - a_yaw > 2) s_yaw.writeMicroseconds(--curr_yaw);
+                else {
+                    // s_yaw.write(d_yaw);
+                    done_yaw = true;
+                }
+            }
+            // uart0.printf("silent: y%d-%c%d p%d-%c%d\r\n", s_yaw.readMicroseconds(), done_yaw?'-':'>', a_yaw, s_pitch.readMicroseconds(), done_pitch?'-':'>', a_pitch);
+            if(done_pitch && done_yaw) break;
+            delay(intrv_ms);
+        }
+        time(&ts_pitch); time(&ts_yaw);
+    }
+    // end silent mode
+    if(s_pitch.attached() && ts - ts_pitch > SERVO_POWER_TIME_MAX) s_pitch.detach();
+    if(s_yaw.attached() && ts - ts_yaw > SERVO_POWER_TIME_MAX) s_yaw.detach();
     if (! WiFi.isConnected() && ! r_wifi) {
         uart0.println("Wifi connection down.");
         uart0.println("Reconnect wifi.");
-        WiFi.disconnect();
-        WiFi.begin(ssid, password);
+        stopCameraServer();
+        WiFi.reconnect();
+        // WiFi.disconnect();
+        // WiFi.begin(ssid, password);
         r_wifi = 1500; // Recall WiFi.begin every 5mins;
     }
     if (WiFi.isConnected() && r_wifi) {
@@ -215,6 +276,7 @@ void loop() {
         }
 #endif
         r_wifi = 0;
+        startCameraServer();
     }
 
     if (! WiFi.isConnected() || r_wifi) {

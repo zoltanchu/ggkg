@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 #include "main.h"
-#include "esp_http_server.h"
 #include "esp_timer.h"
 // #include "esp_camera.h"
 #include "img_converters.h"
@@ -23,6 +22,7 @@
 // #include "ESP32Servo.h"
 #include "Update.h"
 #include "config.h"
+#include "persist.h"
 // #define CONFIG_LED_ILLUMINATOR_ENABLED
 // #define CONFIG_LED_LEDC_CHANNEL LEDC_CHANNEL_4
 // #define CONFIG_LED_MAX_INTENSITY 255
@@ -295,6 +295,27 @@ void enable_led(bool en)
     ESP_LOGI(TAG, "Set LED intensity to %d", duty);
 }
 #endif
+
+esp_err_t req_auth(httpd_req_t *req) {
+    if(httpd_auth_b64.length()) {
+        char auth_temp[97];
+        if(httpd_req_get_hdr_value_str(req, "Authorization", auth_temp, 97) == ESP_OK) {
+            if(httpd_auth_b64.compareTo(String(auth_temp))) {
+            httpd_resp_set_status(req, "401 Unauthorized");
+                httpd_resp_set_type(req, "text/html");
+                httpd_resp_set_hdr(req, "WWW-Authenticate", "Basic realm=\"Retry authentication\"");
+                return httpd_resp_send(req, "Authentication error", 21);
+            }
+        } else {
+            httpd_resp_set_status(req, "401 Unauthorized");
+            httpd_resp_set_type(req, "text/html");
+            httpd_resp_set_hdr(req, "WWW-Authenticate", "Basic realm=\"Authenticate to access GGKG\"");
+            // httpd_resp_send(req, "HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Authenticate to access GGKG\r\nConnection: Close\r\n", 94);
+            return httpd_resp_send(req, "Authentication required", 24);
+        }
+    }
+    return ESP_OK;
+}
 
 static esp_err_t bmp_handler(httpd_req_t *req)
 {
@@ -758,10 +779,24 @@ static esp_err_t cmd_handler(httpd_req_t *req)
             }
         analogWrite(4, flash_br);
     } else if (!strcmp(variable, "pitch")) {
-        s_pitch.write(val);
+        if(!s_pitch.attached()) s_pitch.attach(SERVO_PITCH);
+        time(&ts_pitch);
+        if(SERVO_SILENT_ENABLED) {
+            a_pitch = val;
+            done_pitch = a_pitch < 0;
+            a_pitch = a_pitch * 100 / 9 + 500;
+        } else
+            s_pitch.write(val);
         res = s_pitch.read();
     } else if (!strcmp(variable, "yaw")) {
-        s_yaw.write(val);
+        if(!s_yaw.attached()) s_yaw.attach(SERVO_YAW);
+        time(&ts_yaw);
+        if(SERVO_SILENT_ENABLED) {
+            a_yaw = val;
+            done_yaw = a_yaw < 0;
+            a_yaw = a_yaw * 100 / 9 + 500;
+        } else
+            s_yaw.write(val);
         res = s_yaw.read();
     } else if (!strcmp(variable, "reset"))
         ESP.restart();
@@ -848,6 +883,45 @@ static esp_err_t cmd_handler(httpd_req_t *req)
         return httpd_resp_send_500(req);
     }
 
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return httpd_resp_send(req, NULL, 0);
+}
+
+static esp_err_t config_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    char variable[32];
+    char value[65];
+
+    if (parse_get(req, &buf) != ESP_OK) {
+        return ESP_FAIL;
+    }
+    if (httpd_query_key_value(buf, "var", variable, sizeof(variable)) != ESP_OK ||
+        httpd_query_key_value(buf, "val", value, sizeof(value)) != ESP_OK) {
+        free(buf);
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+    }
+    free(buf);
+
+    int res = 0;
+
+    if (!strcmp(variable, "pitch_def") || !strcmp(variable, "yaw_def")) {
+        res = nvs_set_u8(nvs_ggkg_handle, (const char *) variable, (uint8_t) atoi(value));
+    } else if (!strcmp(variable, "hostname") || !strcmp(variable, "htauth") || !strcmp(variable, "panelpath")
+    || !strcmp(variable, "ssid") || !strcmp(variable, "password")) {
+        res = nvs_set_str(nvs_ggkg_handle, (const char *) variable, (const char *) value);
+    // } else if (!strcmp(variable, "localip") || !strcmp(variable, "nmask") || !strcmp(variable, "gateway"))
+    //     res = nvs_set_u32(nvs_ggkg_handle, (const char *) variable, (const char *) value);
+    } else {
+        ESP_LOGI(TAG, "Unknown command: %s", variable);
+        res = -1;
+    }
+
+    if (res < 0) {
+        return httpd_resp_send_500(req);
+    }
+    nvs_commit(nvs_ggkg_handle);
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, NULL, 0);
 }
@@ -1122,6 +1196,7 @@ static esp_err_t win_handler(httpd_req_t *req)
 
 static esp_err_t index_handler(httpd_req_t *req)
 {
+    // if(req_auth(req)) return ESP_OK;
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
     time(&ts_camera_open);
@@ -1153,26 +1228,14 @@ static esp_err_t silent_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    int a_pitch = parse_get_var(buf, "pitch", -1);
-    int a_yaw = parse_get_var(buf, "yaw", -1);
-    int intrv_ms = parse_get_var(buf, "interval", 6);
-    bool done_pitch = a_pitch < 0;
-    bool done_yaw = a_yaw < 0;
-    if(!done_pitch || !done_yaw)
-        while(1) {
-            if(!done_pitch) {
-                if(s_pitch.read() < a_pitch) s_pitch.write(s_pitch.read() + 1);
-                else if(s_pitch.read() > a_pitch) s_pitch.write(s_pitch.read() - 1);
-                else done_pitch = true;
-            }
-            if(!done_yaw) {
-                if(s_yaw.read() < a_yaw) s_yaw.write(s_yaw.read() + 1);
-                else if(s_yaw.read() > a_yaw) s_yaw.write(s_yaw.read() - 1);
-                else done_yaw = true;
-            }
-            if(done_pitch && done_yaw) break;
-            delay(intrv_ms);
-        }
+    a_pitch = parse_get_var(buf, "pitch", -1);
+    a_yaw = parse_get_var(buf, "yaw", -1);
+    intrv_ms = parse_get_var(buf, "interval", 25);
+    done_pitch = a_pitch < 0;
+    done_yaw = a_yaw < 0;
+    // calculate to ms
+    a_pitch = a_pitch * 100 / 9 + 500;
+    a_yaw = a_yaw * 100 / 9 + 500;
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, "{}", 2);
@@ -1180,11 +1243,14 @@ static esp_err_t silent_handler(httpd_req_t *req) {
 
 void startCameraServer()
 {
+    if(camera_httpd != NULL) return;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 16;
+    // config.stack_size = 8192;
+    config.max_resp_headers = 16;
 
     httpd_uri_t index_uri = {
-        .uri = "/",
+        .uri = panel_path,
         .method = HTTP_GET,
         .handler = index_handler,
         .user_ctx = NULL};
@@ -1217,6 +1283,12 @@ void startCameraServer()
         .uri = "/control",
         .method = HTTP_GET,
         .handler = cmd_handler,
+        .user_ctx = NULL};
+
+    httpd_uri_t config_uri = {
+        .uri = "/config",
+        .method = HTTP_GET,
+        .handler = config_handler,
         .user_ctx = NULL};
 
     httpd_uri_t capture_uri = {
@@ -1297,13 +1369,14 @@ void startCameraServer()
 
 #endif
     ESP_LOGI(TAG, "Starting web server on port: '%d'", config.server_port);
-    if(camera_httpd != NULL) httpd_stop(&camera_httpd);
+    // if(camera_httpd != NULL) httpd_stop(&camera_httpd);
     if (httpd_start(&camera_httpd, &config) == ESP_OK)
     {
         // httpd_register_uri_handler(camera_httpd, &panel_uri);
         httpd_register_uri_handler(camera_httpd, &index_uri);
         httpd_register_uri_handler(camera_httpd, &favicon_uri);
         httpd_register_uri_handler(camera_httpd, &cmd_uri);
+        httpd_register_uri_handler(camera_httpd, &config_uri);
         httpd_register_uri_handler(camera_httpd, &status_uri);
         httpd_register_uri_handler(camera_httpd, &capture_uri);
         httpd_register_uri_handler(camera_httpd, &bmp_uri);
@@ -1324,4 +1397,14 @@ void startCameraServer()
     {
         httpd_register_uri_handler(stream_httpd, &stream_uri);
     }
+}
+
+esp_err_t stopCameraServer() {
+    esp_err_t ret = ESP_OK;
+    if(camera_httpd != NULL) ret = httpd_stop(camera_httpd);
+    if(ret == ESP_OK) camera_httpd = NULL;
+    else return ret;
+    if(stream_httpd != NULL) ret = httpd_stop(stream_httpd);
+    if(ret == ESP_OK) stream_httpd = NULL;
+    return ret;
 }
