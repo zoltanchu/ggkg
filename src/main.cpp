@@ -42,9 +42,9 @@ WireGuard wg;
 char hostmsg[256];
 char *hostamsg = hostmsg;
 
-int r_wifi = 0;
-int a_pitch, a_yaw, intrv_ms;
-bool done_pitch, done_yaw;
+int retry_wifi = 0;
+int intrv_ms;
+bool done_pitch = true, done_yaw = true;
 
 void setup() {
     // esp_log_level_set("*", ESP_LOG_DEBUG);
@@ -61,20 +61,20 @@ void setup() {
     uart0.setDebugOutput(true);
     uart0.println();
 
-    uart0.print("Initializing persistence: ");
-    persist_init();
-    uart0.println("done.");
+    // uart0.print("Initializing persistence: ");
+    // persist_init();
+    // uart0.println("done.");
     uart0.print("Attaching servo: ");
     s_p0.attach(SERVO_PITCH);
     s_p1.attach(SERVO_PITCH);
     uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH, 500, 2500));
-    s_pitch.write(pitch_default);
+    s_pitch.write(pitch);
     time(&ts_pitch);
     uart0.printf("yaw at CH%d. ", s_yaw.attach(SERVO_YAW, 500, 2500));
-    s_yaw.write(yaw_default);
+    s_yaw.write(yaw);
     time(&ts_yaw);
     uart0.println("done.");
-    analogWrite(LED_FLASH, 10);
+    analogWrite(LED_FLASH, 1);
 
     uart0.print("Initializing camera module: ");
     esp_err_t err = cam_init();
@@ -82,7 +82,7 @@ void setup() {
     else {
         uart0.printf("failed with error 0x%x", err);
         uart0.println("");
-        analogWrite(LED_FLASH, 63);
+        analogWrite(LED_FLASH, 3);
     }
 
     // comment the line below if you needn't static IP
@@ -150,6 +150,7 @@ void setup() {
             delay(500);
             digitalWrite(LED_BUILTIN, HIGH);
             delay(500);
+            WiFi.begin(ssid, password);
         }
     }
     uart0.println("Wifi connection done.");
@@ -170,9 +171,8 @@ void setup() {
     uart0.println(&struct_ts, "%B %d %Y %H:%M:%S");
 #endif
 
-    r_wifi = 10;
+    retry_wifi = 10;
 
-    /*
     if(strlen(httpd_auth)) {
         httpd_auth_b64 = base64::encode(httpd_auth);
         uart0.print("Auth with ");
@@ -181,7 +181,6 @@ void setup() {
         uart0.print(httpd_auth_b64);
         uart0.println(").");
     }
-    */
     uart0.print("Starting web server: ");
     startCameraServer();
     uart0.print("done, http://");
@@ -193,6 +192,8 @@ void setup() {
     digitalWrite(LED_BUILTIN, HIGH);
     analogWrite(LED_FLASH, flash_br);
 }
+
+int curr_pitch, curr_yaw, d_pitch, d_yaw;
 
 void loop() {
     /* Auto sleep after 30s idle
@@ -213,49 +214,53 @@ void loop() {
     */
     time(&ts);
     // silent mode
-    if(!done_pitch || !done_yaw) {
-        int curr_pitch = s_pitch.readMicroseconds();
-        int curr_yaw = s_yaw.readMicroseconds();
-        if(!s_pitch.attached()) s_pitch.attach(SERVO_PITCH);
-        time(&ts_pitch);
-        if(!s_yaw.attached()) s_yaw.attach(SERVO_YAW);
-        time(&ts_yaw);
-        while(1) {
-            if(!done_pitch) {
-                if(a_pitch - curr_pitch > 2) s_pitch.writeMicroseconds(++curr_pitch);
-                else if(curr_pitch - a_pitch > 2) s_pitch.writeMicroseconds(--curr_pitch);
-                else {
-                    // s_pitch.write(d_pitch);
-                    done_pitch = true;
-                }
+    if(d_pitch >= 0 && d_yaw >= 0) { // do silent activity
+        if(!done_pitch) {
+            if(d_pitch - curr_pitch > 2) s_pitch.writeMicroseconds(++curr_pitch);
+            else if(curr_pitch - d_pitch > 2) s_pitch.writeMicroseconds(--curr_pitch);
+            else {
+                s_pitch.write(pitch);
+                d_pitch = -1;
+                done_pitch = true;
             }
-            if(!done_yaw) {
-                if(a_yaw - curr_yaw > 2) s_yaw.writeMicroseconds(++curr_yaw);
-                else if(curr_yaw - a_yaw > 2) s_yaw.writeMicroseconds(--curr_yaw);
-                else {
-                    // s_yaw.write(d_yaw);
-                    done_yaw = true;
-                }
-            }
-            // uart0.printf("silent: y%d-%c%d p%d-%c%d\r\n", s_yaw.readMicroseconds(), done_yaw?'-':'>', a_yaw, s_pitch.readMicroseconds(), done_pitch?'-':'>', a_pitch);
-            if(done_pitch && done_yaw) break;
-            delay(intrv_ms);
         }
+        if(!done_yaw) {
+            if(d_yaw - curr_yaw > 2) s_yaw.writeMicroseconds(++curr_yaw);
+            else if(curr_yaw - d_yaw > 2) s_yaw.writeMicroseconds(--curr_yaw);
+            else {
+                s_yaw.write(yaw);
+                d_yaw = -1;
+                done_yaw = true;
+            }
+        }
+        uart0.printf("silent: y%4d-%c%4d p%4d-%c%4d\r\n", s_yaw.readMicroseconds(), done_yaw?'-':'>', d_yaw, s_pitch.readMicroseconds(), done_pitch?'-':'>', d_pitch);
+        // uart0.printf("Pitch: %4dus -%c %4dus, yaw: %4dus -%c %4dus;\r\n", curr_pitch, done_pitch?'-':'>', a_pitch, curr_yaw, done_yaw?'-':'>', a_yaw);
+        if(done_pitch && done_yaw) {
+            uart0.println("silent: done.");
+        }
+        delay(intrv_ms);
+    } else if(!done_pitch || !done_yaw) { // start silent activity
+        uart0.printf("Silent mode: pitch a%d, yaw a%d\r\n", s_pitch.attached(), s_yaw.attached());
+        d_pitch = pitch * 100 / 9 + 500;
+        d_yaw = yaw * 100 / 9 + 500;
         time(&ts_pitch); time(&ts_yaw);
     }
+    
     // end silent mode
-    if(s_pitch.attached() && ts - ts_pitch > SERVO_POWER_TIME_MAX) s_pitch.detach();
-    if(s_yaw.attached() && ts - ts_yaw > SERVO_POWER_TIME_MAX) s_yaw.detach();
-    if (! WiFi.isConnected() && ! r_wifi) {
-        uart0.println("Wifi connection down.");
-        uart0.println("Reconnect wifi.");
-        stopCameraServer();
-        WiFi.reconnect();
-        // WiFi.disconnect();
-        // WiFi.begin(ssid, password);
-        r_wifi = 1500; // Recall WiFi.begin every 5mins;
+    // release servos to save energy
+    if(s_pitch.attached() && ts - ts_pitch > SERVO_POWER_TIME_MAX) {
+        curr_pitch = s_pitch.readMicroseconds();
+        s_pitch.detach();
+        uart0.printf("Pitch slept %d.\r\n", int(ts - ts_pitch));
     }
-    if (WiFi.isConnected() && r_wifi) {
+    if(s_yaw.attached() && ts - ts_yaw > SERVO_POWER_TIME_MAX) {
+        curr_yaw = s_yaw.readMicroseconds();
+        s_yaw.detach();
+        uart0.printf("Yaw slept %d.\r\n", int(ts - ts_yaw));
+    }
+
+    // TODO: not really a good logic, should be rewritten
+    if (WiFi.isConnected() && retry_wifi) {
         uart0.println("Wifi connection established.");
 #if SET_WIREGUARD_ENABLE
         if (! wg.is_initialized()) {
@@ -275,20 +280,25 @@ void loop() {
                 uart0.println("initialize failed.");
         }
 #endif
-        r_wifi = 0;
+        retry_wifi = 0;
         startCameraServer();
     }
-
-    if (! WiFi.isConnected() || r_wifi) {
+    if (!WiFi.isConnected() && ! retry_wifi) {
+        uart0.println("Wifi connection down.");
+        uart0.println("Reconnect wifi.");
+        stopCameraServer();
+        WiFi.disconnect();
+        WiFi.begin(ssid, password);
+        retry_wifi = 60;
+    }
+    if (!WiFi.isConnected() || retry_wifi) {
         uart0.printf("Wifi status: %x", WiFi.status());
         uart0.println();
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(1000);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(1000);
-        if (r_wifi > 0) r_wifi--;
-    } else {
-        delay(10000);
+        digitalWrite(LED_BUILTIN, LOW); delay(500);
+        digitalWrite(LED_BUILTIN, HIGH); delay(500);
+        if (retry_wifi > 0) retry_wifi--;
+    // } else {
+    //     delay(10000);
     }
 }
 

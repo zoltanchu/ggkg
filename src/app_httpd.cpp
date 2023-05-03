@@ -779,22 +779,26 @@ static esp_err_t cmd_handler(httpd_req_t *req)
             }
         analogWrite(4, flash_br);
     } else if (!strcmp(variable, "pitch")) {
-        if(!s_pitch.attached()) s_pitch.attach(SERVO_PITCH);
+        if(!s_pitch.attached()) {
+            s_pitch.attach(SERVO_PITCH);
+            s_pitch.write(pitch);
+        }
         time(&ts_pitch);
         if(SERVO_SILENT_ENABLED) {
-            a_pitch = val;
-            done_pitch = a_pitch < 0;
-            a_pitch = a_pitch * 100 / 9 + 500;
+            pitch = val;
+            done_pitch = pitch < 0;
         } else
             s_pitch.write(val);
         res = s_pitch.read();
     } else if (!strcmp(variable, "yaw")) {
-        if(!s_yaw.attached()) s_yaw.attach(SERVO_YAW);
+        if(!s_yaw.attached()) {
+            s_yaw.attach(SERVO_YAW);
+            s_yaw.write(yaw);
+        }
         time(&ts_yaw);
         if(SERVO_SILENT_ENABLED) {
-            a_yaw = val;
-            done_yaw = a_yaw < 0;
-            a_yaw = a_yaw * 100 / 9 + 500;
+            yaw = val;
+            done_yaw = yaw < 0;
         } else
             s_yaw.write(val);
         res = s_yaw.read();
@@ -970,8 +974,8 @@ static esp_err_t status_handler(httpd_req_t *req)
     }
 
     p += sprintf(p, "\"hostname\":\"%s\",", hostmsg);
-    p += sprintf(p, "\"pitch\":%u,", s_pitch.read());
-    p += sprintf(p, "\"yaw\":%u,", s_yaw.read());
+    p += sprintf(p, "\"pitch\":%u,", pitch);
+    p += sprintf(p, "\"yaw\":%u,", yaw);
     p += sprintf(p, "\"flash\":%u,", flash_br);
     p += sprintf(p, "\"xclk\":%u,", s->xclk_freq_hz / 1000000);
     p += sprintf(p, "\"pixformat\":%u,", s->pixformat);
@@ -1228,14 +1232,24 @@ static esp_err_t silent_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    a_pitch = parse_get_var(buf, "pitch", -1);
-    a_yaw = parse_get_var(buf, "yaw", -1);
+    if(!s_pitch.attached()) {
+        s_pitch.attach(SERVO_PITCH);
+        s_pitch.write(pitch);
+    }
+    time(&ts_pitch);
+    if(!s_yaw.attached()) {
+        s_yaw.attach(SERVO_YAW);
+        s_yaw.write(yaw);
+    }
+    time(&ts_yaw);
+    pitch = parse_get_var(buf, "pitch", -1);
+    yaw = parse_get_var(buf, "yaw", -1);
     intrv_ms = parse_get_var(buf, "interval", 25);
-    done_pitch = a_pitch < 0;
-    done_yaw = a_yaw < 0;
+    done_pitch = pitch < 0;
+    done_yaw = yaw < 0;
     // calculate to ms
-    a_pitch = a_pitch * 100 / 9 + 500;
-    a_yaw = a_yaw * 100 / 9 + 500;
+    // a_pitch = a_pitch * 100 / 9 + 500;
+    // a_yaw = a_yaw * 100 / 9 + 500;
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
     return httpd_resp_send(req, "{}", 2);

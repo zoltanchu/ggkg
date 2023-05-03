@@ -11,7 +11,7 @@
 #include "config.h"
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 
-#define SERVO_POWER_TIME_MAX    3e3
+#define SERVO_POWER_TIME_MAX    3
 #define WLAN_CONN_TIME_MAX      10e3
 #define CAM_IDLE_TIME_MAX       30
 
@@ -34,7 +34,7 @@ extern time_t ts, ts_camera_open, ts_yaw, ts_pitch;
 extern String httpd_auth_b64;
 extern char hostmsg[];
 extern char *hostamsg;
-extern int a_pitch, a_yaw, intrv_ms;
+extern int intrv_ms;
 extern bool done_pitch, done_yaw;
 
 void net_asm();

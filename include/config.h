@@ -4,10 +4,10 @@
 
 #define SET_WIFI_USE_STATIC_IP  1
 #define SET_WIREGUARD_ENABLE    0
-#define SERVO_SILENT_ENABLED    1
+#define SERVO_SILENT_ENABLED    0
 
 extern uint8_t nvs_magic;
-extern int pitch_default, yaw_default;
+extern int pitch, yaw;
 extern char hostname[33], httpd_auth[65], panel_path[17];
 extern char ssid[33], password[49];
 
