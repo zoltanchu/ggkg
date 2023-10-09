@@ -33,7 +33,7 @@
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
-#define TAG ""
+#define TAG "app_httpd"
 #else
 #include "esp_log.h"
 static const char *TAG = "camera_httpd";
@@ -75,7 +75,7 @@ typedef struct
     size_t len;
 } jpg_chunking_t;
 
-#define PART_BOUNDARY "(c) 2009 - 2022 KNL innovative"
+#define PART_BOUNDARY "(c) 2023 A-Sync China Facility"
 static const char *_STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
 static const char *_STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char *_STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\nX-Timestamp: %d.%06d\r\n\r\n";
@@ -374,12 +374,15 @@ static size_t jpg_encode_stream(void *arg, size_t index, const void *data, size_
 
 static esp_err_t capture_handler(httpd_req_t *req)
 {
+    uart0.println("app_httpd: get still");
     time(&ts_camera_open);
+    /*
     if(!camera_is_inited) {
         time(&ts);
         cam_reinit();
         delay(3000);
     }
+    */
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
     int64_t fr_start = esp_timer_get_time();
@@ -497,6 +500,7 @@ static esp_err_t capture_handler(httpd_req_t *req)
 
 static esp_err_t stream_handler(httpd_req_t *req)
 {
+    uart0.println("app_httpd: open stream");
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     camera_fb_t *fb = NULL;
@@ -740,6 +744,7 @@ static esp_err_t parse_get(httpd_req_t *req, char **obuf)
 
 static esp_err_t cmd_handler(httpd_req_t *req)
 {
+    uart0.println("app_httpd: open control");
     char *buf = NULL;
     char variable[32];
     char value[32];
@@ -781,26 +786,30 @@ static esp_err_t cmd_handler(httpd_req_t *req)
     } else if (!strcmp(variable, "pitch")) {
         if(!s_pitch.attached()) {
             s_pitch.attach(SERVO_PITCH);
-            s_pitch.write(pitch);
+            s_pitch.writeMicroseconds(curr_pitch);
         }
         time(&ts_pitch);
+        pitch = val;
         if(SERVO_SILENT_ENABLED) {
-            pitch = val;
             done_pitch = pitch < 0;
-        } else
-            s_pitch.write(val);
+        } else {
+            s_pitch.write(pitch);
+            curr_pitch = s_pitch.readMicroseconds();
+        }
         res = s_pitch.read();
     } else if (!strcmp(variable, "yaw")) {
         if(!s_yaw.attached()) {
             s_yaw.attach(SERVO_YAW);
-            s_yaw.write(yaw);
+            s_yaw.writeMicroseconds(curr_yaw);
         }
         time(&ts_yaw);
+        yaw = val;
         if(SERVO_SILENT_ENABLED) {
-            yaw = val;
             done_yaw = yaw < 0;
-        } else
-            s_yaw.write(val);
+        } else {
+            s_yaw.write(yaw);
+            curr_yaw = s_yaw.readMicroseconds();
+        }
         res = s_yaw.read();
     } else if (!strcmp(variable, "reset"))
         ESP.restart();
@@ -1197,16 +1206,17 @@ static esp_err_t win_handler(httpd_req_t *req)
     return httpd_resp_send(req, NULL, 0);
 }
 
-
 static esp_err_t index_handler(httpd_req_t *req)
 {
+    uart0.println("app_httpd: open panel");
     // if(req_auth(req)) return ESP_OK;
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
-    /*
+
     if (s != NULL) {
         if (s->id.PID == OV3660_PID) {
             return httpd_resp_send(req, (const char *)index_ov3660_html_gz, index_ov3660_html_gz_len);
@@ -1214,34 +1224,26 @@ static esp_err_t index_handler(httpd_req_t *req)
             return httpd_resp_send(req, (const char *)index_ov5640_html_gz, index_ov5640_html_gz_len);
         } else {
     */
-            return httpd_resp_send(req, (const char *)index_ov2640_html_gz, index_ov2640_html_gz_len);
+    return httpd_resp_send(req, (const char *)index_ov2640_html_gz, index_ov2640_html_gz_len);
     /*
         }
     } else {
-    */
+
     if(s == NULL) {
         ESP_LOGE(TAG, "Camera sensor not found");
         return httpd_resp_send_500(req);
     }
+    */
 }
 
 static esp_err_t silent_handler(httpd_req_t *req) {
+    uart0.println("app_httpd: open silent");
     char *buf = NULL;
 
     if (parse_get(req, &buf) != ESP_OK) {
         return ESP_FAIL;
     }
 
-    if(!s_pitch.attached()) {
-        s_pitch.attach(SERVO_PITCH);
-        s_pitch.write(pitch);
-    }
-    time(&ts_pitch);
-    if(!s_yaw.attached()) {
-        s_yaw.attach(SERVO_YAW);
-        s_yaw.write(yaw);
-    }
-    time(&ts_yaw);
     pitch = parse_get_var(buf, "pitch", -1);
     yaw = parse_get_var(buf, "yaw", -1);
     intrv_ms = parse_get_var(buf, "interval", 25);
@@ -1260,7 +1262,7 @@ void startCameraServer()
     if(camera_httpd != NULL) return;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 16;
-    // config.stack_size = 8192;
+    config.stack_size = 8192;
     config.max_resp_headers = 16;
 
     httpd_uri_t index_uri = {

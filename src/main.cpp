@@ -12,6 +12,8 @@
 #endif
 // #include "soc/rtc.h"
 
+#define TAG "main"
+
 const char *ntp_server1 = "pool.ntp.org";
 const char *ntp_server2 = "time.nist.gov";
 const char *ntp_server3 = "cn.ntp.org.cn";
@@ -44,6 +46,7 @@ char *hostamsg = hostmsg;
 
 int retry_wifi = 0;
 int intrv_ms;
+int curr_pitch = -1, curr_yaw = -1, dest_pitch = -1, dest_yaw = -1;
 bool done_pitch = true, done_yaw = true;
 
 void setup() {
@@ -58,13 +61,14 @@ void setup() {
     hostamsg = hostmsg + strlen(hostmsg);
 
     uart0.begin(115200);
-    uart0.setDebugOutput(true);
+    Serial.setDebugOutput(true);
     uart0.println();
 
     // uart0.print("Initializing persistence: ");
     // persist_init();
     // uart0.println("done.");
-    uart0.print("Attaching servo: ");
+    // ESP_LOGI(TAG,);
+    uart0.print("setup: attaching servo: ");
     s_p0.attach(SERVO_PITCH);
     s_p1.attach(SERVO_PITCH);
     uart0.printf("pitch at CH%d, ", s_pitch.attach(SERVO_PITCH, 500, 2500));
@@ -76,11 +80,11 @@ void setup() {
     uart0.println("done.");
     analogWrite(LED_FLASH, 1);
 
-    uart0.print("Initializing camera module: ");
+    uart0.print("setup: cam init: ");
     esp_err_t err = cam_init();
     if(err == ESP_OK) uart0.println("done.");
     else {
-        uart0.printf("failed with error 0x%x", err);
+        uart0.printf("fail 0x%x", err);
         uart0.println("");
         analogWrite(LED_FLASH, 3);
     }
@@ -92,9 +96,9 @@ void setup() {
     WiFi.setAutoConnect(true);
     //WiFi.setAutoReconnect(true);
     //WiFi.persistent(true);
-    WiFi.setSleep(false);
+    WiFi.setSleep(true);
     WiFi.setHostname(hostname);
-    // TODO: Realize permanent config over serial or hotspot
+    // TODO: Implement permanent config over serial or hotspot
 #ifdef WLAN_UART_CONFIGURABLE
     while(uart0.available()) uart0.print(uart0.read());
     uart0.println("Press any key to interrupt WLAN default config (1s).");
@@ -134,9 +138,9 @@ void setup() {
         WiFi.begin((const char *) _ssid, (const char *) _pass);
     } else {
 #endif
-        uart0.print("Connecting to wlreless LAN: ");
-        uart0.println(ssid);
-        // uart0.print(": ");
+        uart0.print("setup: WLAN conn: ");
+        uart0.print(ssid);
+        uart0.print(": ");
         // TODO: online config over serial, bluetooth
         WiFi.begin(ssid, password);
 #ifdef WLAN_UART_CONFIGURABLE
@@ -144,8 +148,8 @@ void setup() {
 #endif
     analogWrite(LED_FLASH, 0);
     if(WiFi.waitForConnectResult() != WL_CONNECTED) {
-        while(! WiFi.isConnected()) {
-            uart0.println("Wifi is not connected.");
+        while(!WiFi.isConnected()) {
+            uart0.print(".");
             digitalWrite(LED_BUILTIN, LOW);
             delay(500);
             digitalWrite(LED_BUILTIN, HIGH);
@@ -153,7 +157,7 @@ void setup() {
             WiFi.begin(ssid, password);
         }
     }
-    uart0.println("Wifi connection done.");
+    uart0.println("done");
 
 #if SET_WIREGUARD_ENABLE
     uart0.print("Start sync time: ");
@@ -175,15 +179,15 @@ void setup() {
 
     if(strlen(httpd_auth)) {
         httpd_auth_b64 = base64::encode(httpd_auth);
-        uart0.print("Auth with ");
+        uart0.print("setup: http basic auth ");
         uart0.print(httpd_auth);
         uart0.print(" (");
         uart0.print(httpd_auth_b64);
         uart0.println(").");
     }
-    uart0.print("Starting web server: ");
+    uart0.print("setup: http server: ");
     startCameraServer();
-    uart0.print("done, http://");
+    uart0.print("http://");
     uart0.print(WiFi.localIP());
     uart0.println(".");
     time(&ts);
@@ -192,8 +196,6 @@ void setup() {
     digitalWrite(LED_BUILTIN, HIGH);
     analogWrite(LED_FLASH, flash_br);
 }
-
-int curr_pitch, curr_yaw, d_pitch, d_yaw;
 
 void loop() {
     /* Auto sleep after 30s idle
@@ -214,54 +216,74 @@ void loop() {
     */
     time(&ts);
     // silent mode
-    if(d_pitch >= 0 && d_yaw >= 0) { // do silent activity
+    if(dest_pitch >= 0 && dest_yaw >= 0) { // do silent activity
         if(!done_pitch) {
-            if(d_pitch - curr_pitch > 2) s_pitch.writeMicroseconds(++curr_pitch);
-            else if(curr_pitch - d_pitch > 2) s_pitch.writeMicroseconds(--curr_pitch);
+            time(&ts_pitch);
+            if(dest_pitch - curr_pitch > 2) s_pitch.writeMicroseconds(++curr_pitch);
+            else if(curr_pitch - dest_pitch > 2) s_pitch.writeMicroseconds(--curr_pitch);
             else {
                 s_pitch.write(pitch);
-                d_pitch = -1;
+                dest_pitch = -1;
                 done_pitch = true;
             }
         }
         if(!done_yaw) {
-            if(d_yaw - curr_yaw > 2) s_yaw.writeMicroseconds(++curr_yaw);
-            else if(curr_yaw - d_yaw > 2) s_yaw.writeMicroseconds(--curr_yaw);
+            time(&ts_yaw);
+            if(dest_yaw - curr_yaw > 2) s_yaw.writeMicroseconds(++curr_yaw);
+            else if(curr_yaw - dest_yaw > 2) s_yaw.writeMicroseconds(--curr_yaw);
             else {
                 s_yaw.write(yaw);
-                d_yaw = -1;
+                dest_yaw = -1;
                 done_yaw = true;
             }
         }
-        uart0.printf("silent: y%4d-%c%4d p%4d-%c%4d\r\n", s_yaw.readMicroseconds(), done_yaw?'-':'>', d_yaw, s_pitch.readMicroseconds(), done_pitch?'-':'>', d_pitch);
+        uart0.printf("silent: y%4d-%c%4d p%4d-%c%4d\r\n", s_yaw.readMicroseconds(), done_yaw?'-':'>', dest_yaw, s_pitch.readMicroseconds(), done_pitch?'-':'>', dest_pitch);
         // uart0.printf("Pitch: %4dus -%c %4dus, yaw: %4dus -%c %4dus;\r\n", curr_pitch, done_pitch?'-':'>', a_pitch, curr_yaw, done_yaw?'-':'>', a_yaw);
         if(done_pitch && done_yaw) {
             uart0.println("silent: done.");
         }
         delay(intrv_ms);
     } else if(!done_pitch || !done_yaw) { // start silent activity
-        uart0.printf("Silent mode: pitch a%d, yaw a%d\r\n", s_pitch.attached(), s_yaw.attached());
-        d_pitch = pitch * 100 / 9 + 500;
-        d_yaw = yaw * 100 / 9 + 500;
+        uart0.printf("loop: silent, pitch a%d, yaw a%d\r\n", s_pitch.attached(), s_yaw.attached());
+        if(!s_pitch.attached()) {
+            s_pitch.attach(SERVO_PITCH);
+            s_pitch.writeMicroseconds(curr_pitch);
+        } else {
+            curr_pitch = s_pitch.readMicroseconds();
+        }
+        if(!s_yaw.attached()) {
+            s_yaw.attach(SERVO_YAW);
+            s_yaw.writeMicroseconds(curr_yaw);
+        } else {
+            curr_yaw = s_yaw.readMicroseconds();
+        }
+        dest_pitch = pitch * 100 / 9 + 500;
+        dest_yaw = yaw * 100 / 9 + 500;
         time(&ts_pitch); time(&ts_yaw);
     }
+    /* (09/10/2023 kontornl) update silent dest
+    if(!done_pitch || !done_yaw) { // update silent dest
+        uart0.printf("loop: silent update, pitch a%d, yaw a%d\r\n", s_pitch.attached(), s_yaw.attached());
+        dest_pitch = pitch * 100 / 9 + 500;
+        dest_yaw = yaw * 100 / 9 + 500;
+    }
+    */
     
     // end silent mode
     // release servos to save energy
     if(s_pitch.attached() && ts - ts_pitch > SERVO_POWER_TIME_MAX) {
         curr_pitch = s_pitch.readMicroseconds();
         s_pitch.detach();
-        uart0.printf("Pitch slept %d.\r\n", int(ts - ts_pitch));
+        uart0.printf("loop: pitch slept %d.\r\n", int(ts - ts_pitch));
     }
     if(s_yaw.attached() && ts - ts_yaw > SERVO_POWER_TIME_MAX) {
         curr_yaw = s_yaw.readMicroseconds();
         s_yaw.detach();
-        uart0.printf("Yaw slept %d.\r\n", int(ts - ts_yaw));
+        uart0.printf("loop: yaw slept %d.\r\n", int(ts - ts_yaw));
     }
 
-    // TODO: not really a good logic, should be rewritten
     if (WiFi.isConnected() && retry_wifi) {
-        uart0.println("Wifi connection established.");
+        uart0.println("loop: WLAN conn done");
 #if SET_WIREGUARD_ENABLE
         if (! wg.is_initialized()) {
             //uart0.print("Stop old wg connection: ");
@@ -281,18 +303,17 @@ void loop() {
         }
 #endif
         retry_wifi = 0;
-        startCameraServer();
+        // startCameraServer();
     }
     if (!WiFi.isConnected() && ! retry_wifi) {
-        uart0.println("Wifi connection down.");
-        uart0.println("Reconnect wifi.");
-        stopCameraServer();
+        uart0.println("loop: WLAN disconn retry timed out");
+        // stopCameraServer();
         WiFi.disconnect();
         WiFi.begin(ssid, password);
         retry_wifi = 60;
     }
     if (!WiFi.isConnected() || retry_wifi) {
-        uart0.printf("Wifi status: %x", WiFi.status());
+        uart0.printf("loop: WLAN stat %x", WiFi.status());
         uart0.println();
         digitalWrite(LED_BUILTIN, LOW); delay(500);
         digitalWrite(LED_BUILTIN, HIGH); delay(500);

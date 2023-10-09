@@ -35,6 +35,7 @@ extern String httpd_auth_b64;
 extern char hostmsg[];
 extern char *hostamsg;
 extern int intrv_ms;
+extern int curr_pitch, curr_yaw, dest_pitch, dest_yaw;
 extern bool done_pitch, done_yaw;
 
 void net_asm();
