@@ -18,9 +18,8 @@
 #include "fb_gfx.h"
 #include "driver/ledc.h"
 #include "camera_index.h"
-#include "sdkconfig.h"
+// #include "sdkconfig.h"
 // #include "ESP32Servo.h"
-#include "Update.h"
 #include "config.h"
 #include "persist.h"
 // #define CONFIG_LED_ILLUMINATOR_ENABLED
@@ -319,8 +318,10 @@ esp_err_t req_auth(httpd_req_t *req) {
 
 static esp_err_t bmp_handler(httpd_req_t *req)
 {
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
+    */
     camera_fb_t *fb = NULL;
     esp_err_t res = ESP_OK;
     uint64_t fr_start = esp_timer_get_time();
@@ -375,8 +376,8 @@ static size_t jpg_encode_stream(void *arg, size_t index, const void *data, size_
 static esp_err_t capture_handler(httpd_req_t *req)
 {
     uart0.println("app_httpd: get still");
-    time(&ts_camera_open);
     /*
+    time(&ts_camera_open);
     if(!camera_is_inited) {
         time(&ts);
         cam_reinit();
@@ -501,8 +502,10 @@ static esp_err_t capture_handler(httpd_req_t *req)
 static esp_err_t stream_handler(httpd_req_t *req)
 {
     uart0.println("app_httpd: open stream");
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
+    */
     camera_fb_t *fb = NULL;
     struct timeval _timestamp;
     esp_err_t res = ESP_OK;
@@ -711,7 +714,7 @@ static esp_err_t stream_handler(httpd_req_t *req)
 
     isStreaming = false;
     *hostamsg = '\0';
-    time(&ts_camera_open);
+    // time(&ts_camera_open);
 #ifdef CONFIG_LED_ILLUMINATOR_ENABLED
     enable_led(false);
 #endif
@@ -762,8 +765,10 @@ static esp_err_t cmd_handler(httpd_req_t *req)
 
     int val = atoi(value);
     ESP_LOGI(TAG, "%s = %d", variable, val);
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
+    */
     sensor_t *s = esp_camera_sensor_get();
     int res = 0;
 
@@ -784,33 +789,19 @@ static esp_err_t cmd_handler(httpd_req_t *req)
             }
         analogWrite(4, flash_br);
     } else if (!strcmp(variable, "pitch")) {
-        if(!s_pitch.attached()) {
-            s_pitch.attach(SERVO_PITCH);
-            s_pitch.writeMicroseconds(curr_pitch);
-        }
-        time(&ts_pitch);
-        pitch = val;
         if(SERVO_SILENT_ENABLED) {
-            done_pitch = pitch < 0;
+            gimbal.setTargetPitchAngle(val);
         } else {
-            s_pitch.write(pitch);
-            curr_pitch = s_pitch.readMicroseconds();
+            gimbal.setPitchAngle(val);
         }
-        res = s_pitch.read();
+        res = gimbal.getPitchAngle();
     } else if (!strcmp(variable, "yaw")) {
-        if(!s_yaw.attached()) {
-            s_yaw.attach(SERVO_YAW);
-            s_yaw.writeMicroseconds(curr_yaw);
-        }
-        time(&ts_yaw);
-        yaw = val;
         if(SERVO_SILENT_ENABLED) {
-            done_yaw = yaw < 0;
+            gimbal.setTargetYawAngle(val);
         } else {
-            s_yaw.write(yaw);
-            curr_yaw = s_yaw.readMicroseconds();
+            gimbal.setYawAngle(val);
         }
-        res = s_yaw.read();
+        res = gimbal.getYawAngle();
     } else if (!strcmp(variable, "reset"))
         ESP.restart();
     else if (!strcmp(variable, "quality"))
@@ -947,8 +938,10 @@ static esp_err_t status_handler(httpd_req_t *req)
 {
     static char json_response[1024];
 
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
+    */
     sensor_t *s = esp_camera_sensor_get();
     char *p = json_response;
     *p++ = '{';
@@ -983,8 +976,8 @@ static esp_err_t status_handler(httpd_req_t *req)
     }
 
     p += sprintf(p, "\"hostname\":\"%s\",", hostmsg);
-    p += sprintf(p, "\"pitch\":%u,", pitch);
-    p += sprintf(p, "\"yaw\":%u,", yaw);
+    p += sprintf(p, "\"pitch\":%u,", gimbal.getPitchAngle());
+    p += sprintf(p, "\"yaw\":%u,", gimbal.getYawAngle());
     p += sprintf(p, "\"flash\":%u,", flash_br);
     p += sprintf(p, "\"xclk\":%u,", s->xclk_freq_hz / 1000000);
     p += sprintf(p, "\"pixformat\":%u,", s->pixformat);
@@ -1049,8 +1042,10 @@ static esp_err_t xclk_handler(httpd_req_t *req)
     int xclk = atoi(_xclk);
     ESP_LOGI(TAG, "Set XCLK: %d MHz", xclk);
 
+    /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
+    */
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_xclk(s, LEDC_TIMER_0, xclk);
     if (res) {
@@ -1085,8 +1080,9 @@ static esp_err_t reg_handler(httpd_req_t *req)
     int val = atoi(_val);
     ESP_LOGI(TAG, "Set Register: reg: 0x%02x, mask: 0x%02x, value: 0x%02x", reg, mask, val);
 
-    time(&ts_camera_open);
-    if(!camera_is_inited) cam_reinit();
+    
+    // time(&ts_camera_open);
+    // if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_reg(s, reg, mask, val);
     if (res) {
@@ -1116,8 +1112,8 @@ static esp_err_t greg_handler(httpd_req_t *req)
 
     int reg = atoi(_reg);
     int mask = atoi(_mask);
-    time(&ts_camera_open);
-    if(!camera_is_inited) cam_reinit();
+    // time(&ts_camera_open);
+    // if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->get_reg(s, reg, mask);
     if (res < 0) {
@@ -1159,8 +1155,8 @@ static esp_err_t pll_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Pll: bypass: %d, mul: %d, sys: %d, root: %d, pre: %d, seld5: %d, pclken: %d, pclk: %d", bypass, mul, sys, root, pre, seld5, pclken, pclk);
-    time(&ts_camera_open);
-    if(!camera_is_inited) cam_reinit();
+    // time(&ts_camera_open);
+    // if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_pll(s, bypass, mul, sys, root, pre, seld5, pclken, pclk);
     if (res) {
@@ -1194,8 +1190,8 @@ static esp_err_t win_handler(httpd_req_t *req)
     free(buf);
 
     ESP_LOGI(TAG, "Set Window: Start: %d %d, End: %d %d, Offset: %d %d, Total: %d %d, Output: %d %d, Scale: %u, Binning: %u", startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
-    time(&ts_camera_open);
-    if(!camera_is_inited) cam_reinit();
+    // time(&ts_camera_open);
+    // if(!camera_is_inited) cam_reinit();
     sensor_t *s = esp_camera_sensor_get();
     int res = s->set_res_raw(s, startX, startY, endX, endY, offsetX, offsetY, totalX, totalY, outputX, outputY, scale, binning);
     if (res) {
@@ -1244,17 +1240,12 @@ static esp_err_t silent_handler(httpd_req_t *req) {
         return ESP_FAIL;
     }
 
-    pitch = parse_get_var(buf, "pitch", -1);
-    yaw = parse_get_var(buf, "yaw", -1);
-    intrv_ms = parse_get_var(buf, "interval", 25);
-    done_pitch = pitch < 0;
-    done_yaw = yaw < 0;
-    // calculate to ms
-    // a_pitch = a_pitch * 100 / 9 + 500;
-    // a_yaw = a_yaw * 100 / 9 + 500;
+    gimbal.setTargetPitchAngle(parse_get_var(buf, "pitch", -1));
+    gimbal.setTargetYawAngle(parse_get_var(buf, "yaw", -1));
+    gimbal.setSilentIntervalMs(parse_get_var(buf, "interval", 25));
     httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
-    return httpd_resp_send(req, "{}", 2);
+    return httpd_resp_send(req, "{}", 3);
 }
 
 void startCameraServer()

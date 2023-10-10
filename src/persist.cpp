@@ -12,8 +12,8 @@ void persist_init() {
         nvs_flash_erase();
         nvs_flash_init();
         nvs_set_u8(nvs_ggkg_handle, "magic", nvs_magic);
-        nvs_set_u8(nvs_ggkg_handle, "pitch_def", pitch);
-        nvs_set_u8(nvs_ggkg_handle, "yaw_def", yaw);
+        nvs_set_u8(nvs_ggkg_handle, "pitch_def", gimbal.getPitchAngle());
+        nvs_set_u8(nvs_ggkg_handle, "yaw_def", gimbal.getYawAngle());
         nvs_set_str(nvs_ggkg_handle, "hostname", hostname);
         nvs_set_str(nvs_ggkg_handle, "htauth", httpd_auth);
         nvs_set_str(nvs_ggkg_handle, "panelpath", panel_path);
@@ -27,8 +27,8 @@ void persist_init() {
         nvs_commit(nvs_ggkg_handle);
         // nvs_close(nvs_ggkg_handle);
     } else {
-        nvs_get_u8(nvs_ggkg_handle, "pitch_def", (uint8_t *) &pitch);
-        nvs_get_u8(nvs_ggkg_handle, "yaw_def", (uint8_t *) &yaw);
+        nvs_get_u8(nvs_ggkg_handle, "pitch_def", (uint8_t *) &pitchAngle);
+        nvs_get_u8(nvs_ggkg_handle, "yaw_def", (uint8_t *) &yawAngle);
         nvs_get_str(nvs_ggkg_handle, "hostname", hostname, &__len);
         nvs_get_str(nvs_ggkg_handle, "htauth", httpd_auth, &__len);
         nvs_get_str(nvs_ggkg_handle, "panelpath", panel_path, &__len);

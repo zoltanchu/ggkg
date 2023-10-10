@@ -400,3 +400,5 @@
 #define CONFIG_FATFS_API_ENCODING_ANSI_OEM 1
 #define CONFIG_ARDUINO_IDF_COMMIT "85c43024c"
 #define CONFIG_ARDUINO_IDF_BRANCH "release/v3.3"
+
+#warning("using include/sdkconfig.h")

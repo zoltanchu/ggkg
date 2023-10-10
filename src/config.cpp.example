@@ -1,10 +1,12 @@
 #include "Arduino.h"
-#include "config.h"
 
-int pitch_default = 20;
-int yaw_default = 90;
-const char *hostname = "ggkg";
-const char *httpd_auth = "username:password";
+uint8_t nvs_magic = 134;
+int pitchAngle = 24;
+int yawAngle = 160;
+char hostname[33] = "ggkg";
+char httpd_auth[65] = "username:password";
+char panel_path[17] = "/";
+
 const char* ssid = "wdnmd";
 const char* password = "a1gaoshan";
 
@@ -17,7 +19,7 @@ IPAddress gateway(192, 168, 1, 1);
 #if SET_WIREGUARD_ENABLE
 const IPAddress wg_local_ip(192, 168, 100, 1);
 const char *wg_private_key = "";
-const char *wg_endpoint_address = "wg.youmu.love";
+const char *wg_endpoint_address = "wg.exam.pl";
 const char *wg_public_key = "";
 uint16_t wg_endpoint_port = 50000;
 #endif

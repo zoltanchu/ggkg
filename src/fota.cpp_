@@ -1,0 +1,6 @@
+#include "main.h"
+#include "HTTPUpdateServer.h"
+
+WebServer otaServer(82);
+HTTPUpdateServer httpOta;
+

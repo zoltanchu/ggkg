@@ -7,7 +7,7 @@
 #define SERVO_SILENT_ENABLED    0
 
 extern uint8_t nvs_magic;
-extern int pitch, yaw;
+extern int pitchAngle, yawAngle;
 extern char hostname[33], httpd_auth[65], panel_path[17];
 extern char ssid[33], password[49];
 
