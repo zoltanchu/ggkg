@@ -375,7 +375,8 @@ static size_t jpg_encode_stream(void *arg, size_t index, const void *data, size_
 
 static esp_err_t capture_handler(httpd_req_t *req)
 {
-    uart0.println("app_httpd: get still");
+    uart0.printf("app_httpd: open still on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     /*
     time(&ts_camera_open);
     if(!camera_is_inited) {
@@ -501,7 +502,8 @@ static esp_err_t capture_handler(httpd_req_t *req)
 
 static esp_err_t stream_handler(httpd_req_t *req)
 {
-    uart0.println("app_httpd: open stream");
+    uart0.printf("app_httpd: open stream on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     /*
     time(&ts_camera_open);
     if(!camera_is_inited) cam_reinit();
@@ -747,7 +749,8 @@ static esp_err_t parse_get(httpd_req_t *req, char **obuf)
 
 static esp_err_t cmd_handler(httpd_req_t *req)
 {
-    uart0.println("app_httpd: open control");
+    uart0.printf("app_httpd: open control on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     char *buf = NULL;
     char variable[32];
     char value[32];
@@ -1204,7 +1207,8 @@ static esp_err_t win_handler(httpd_req_t *req)
 
 static esp_err_t index_handler(httpd_req_t *req)
 {
-    uart0.println("app_httpd: open panel");
+    uart0.printf("app_httpd: open index on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     // if(req_auth(req)) return ESP_OK;
     httpd_resp_set_type(req, "text/html");
     httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
@@ -1233,7 +1237,8 @@ static esp_err_t index_handler(httpd_req_t *req)
 }
 
 static esp_err_t silent_handler(httpd_req_t *req) {
-    uart0.println("app_httpd: open silent");
+    uart0.printf("app_httpd: open silent on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     char *buf = NULL;
 
     if (parse_get(req, &buf) != ESP_OK) {
@@ -1250,6 +1255,8 @@ static esp_err_t silent_handler(httpd_req_t *req) {
 
 void startCameraServer()
 {
+    uart0.printf("app_httpd: startCameraServer on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     if(camera_httpd != NULL) return;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 16;

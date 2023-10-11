@@ -59,36 +59,31 @@ void setup() {
     // persist_init();
     // uart0.println("done.");
     // ESP_LOGI(TAG,);
+    uart0.printf("setup: running on core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+    uart0.println();
     uart0.print("setup: init Gimbal: ");
     gimbal.init();
-    uart0.println("done.");
+    uart0.println("done");
     analogWrite(LED_FLASH, 1);
 
     uart0.print("setup: cam init: ");
     CamSensor camSensor;
     esp_err_t err = camSensor.init();
-    if(err == ESP_OK) uart0.println("done.");
+    if(err == ESP_OK) uart0.println("done");
     else {
         uart0.printf("fail 0x%x", err);
         uart0.println("");
         analogWrite(LED_FLASH, 3);
     }
 
-    // comment the line below if you needn't static IP
-#if SET_WIFI_USE_STATIC_IP
-    WiFi.config(IPAddress(local_ip), IPAddress(gateway), IPAddress(netmask), IPAddress(223, 5, 5, 5), IPAddress(gateway));
-#endif
-    WiFi.setAutoConnect(true);
-    //WiFi.setAutoReconnect(true);
-    //WiFi.persistent(true);
-    WiFi.setSleep(true);
-    WiFi.setHostname(hostname);
     // TODO: Implement permanent config over serial or hotspot
 #ifdef WLAN_UART_CONFIGURABLE
+    // TODO: (11/10/2023 kontornl) support BS \b
     while(uart0.available()) uart0.print(uart0.read());
-    uart0.println("Press any key to interrupt WLAN default config (3s).");
+    uart0.println("setup: press any key to interrupt WLAN default config (3s).");
     delay(3000);
-    if(uart0.available()) {
+    // (11/10/2023 kontornl) enter config on both user interrupt and no default
+    if(uart0.available() || ssid[0] == '\0') {
         ssid[0] = '\0', password[0] = '\0';
         while(uart0.available()) uart0.print((char) uart0.read());
         uart0.println();
@@ -109,8 +104,8 @@ void setup() {
         uart0.print("Password: ");
         while(password[0] == '\0') {
             while(uart0.available()) {
-                char in = uart0.read(); uart0.print(in);
-                // char in = uart0.read(); uart0.print('*');
+                // char in = uart0.read(); uart0.print(in);
+                char in = uart0.read(); uart0.print('*');
                 if(in=='\r' || in=='\n') {
                     uart0_rbuf.getBytes((unsigned char *) password, 49);
                     uart0_rbuf.clear();
@@ -121,8 +116,19 @@ void setup() {
         }
         while(uart0.available()) uart0.print(uart0.read());
         uart0.println();
+    } else {
+#endif
+#if SET_WIFI_USE_STATIC_IP
+        WiFi.config(IPAddress(local_ip), IPAddress(gateway), IPAddress(netmask), IPAddress(223, 5, 5, 5), IPAddress(gateway));
+#endif
+#ifdef WLAN_UART_CONFIGURABLE
     }
 #endif
+    WiFi.setAutoConnect(true);
+    //WiFi.setAutoReconnect(true);
+    //WiFi.persistent(true);
+    WiFi.setSleep(true);
+    WiFi.setHostname(hostname);
     uart0.print("setup: WLAN conn ");
     uart0.print(ssid);
     uart0.print(": ");
@@ -204,7 +210,8 @@ void loop() {
         uart0.println("loop: yaw slept");
 
     if (WiFi.isConnected() && retry_wifi) {
-        uart0.println("loop: WLAN conn done");
+        uart0.printf("loop: WLAN conn done, core %u, taskhandle 0x%x", xPortGetCoreID(), xTaskGetCurrentTaskHandle());
+        uart0.println();
 #if SET_WIREGUARD_ENABLE
         if (! wg.is_initialized()) {
             //uart0.print("Stop old wg connection: ");
@@ -242,4 +249,5 @@ void loop() {
     // } else {
     //     delay(10000);
     }
+    while(uart0.available()) uart0.print((char) uart0.read());
 }
