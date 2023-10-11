@@ -86,30 +86,33 @@ void setup() {
     // TODO: Implement permanent config over serial or hotspot
 #ifdef WLAN_UART_CONFIGURABLE
     while(uart0.available()) uart0.print(uart0.read());
-    uart0.println("Press any key to interrupt WLAN default config (1s).");
-    delay(1000);
+    uart0.println("Press any key to interrupt WLAN default config (3s).");
+    delay(3000);
     if(uart0.available()) {
-        unsigned char _ssid[64] = "", _pass[64] = "";
-        while(uart0.available()) uart0.print(uart0.read());
+        ssid[0] = '\0', password[0] = '\0';
+        while(uart0.available()) uart0.print((char) uart0.read());
+        uart0.println();
         uart0.print("SSID: ");
-        while(_ssid[0] == '\0') {
+        while(ssid[0] == '\0') {
             while(uart0.available()) {
                 char in = uart0.read(); uart0.print(in);
                 if(in=='\r' || in=='\n') {
-                    uart0_rbuf.getBytes(_ssid, uart0_rbuf.length());
+                    uart0_rbuf.getBytes((unsigned char *) ssid, 33);
                     uart0_rbuf.clear();
                     break;
                 }
                 else uart0_rbuf += in;
             }
         }
-        while(uart0.available()) uart0.print(uart0.read());
+        while(uart0.available()) uart0.print((char) uart0.read());
+        uart0.println();
         uart0.print("Password: ");
-        while(_pass[0] == '\0') {
+        while(password[0] == '\0') {
             while(uart0.available()) {
-                char in = uart0.read(); uart0.print('*');
+                char in = uart0.read(); uart0.print(in);
+                // char in = uart0.read(); uart0.print('*');
                 if(in=='\r' || in=='\n') {
-                    uart0_rbuf.getBytes(_pass, uart0_rbuf.length());
+                    uart0_rbuf.getBytes((unsigned char *) password, 49);
                     uart0_rbuf.clear();
                     break;
                 }
@@ -117,20 +120,15 @@ void setup() {
             }
         }
         while(uart0.available()) uart0.print(uart0.read());
-        uart0.print("Connecting to wlreless LAN ");
-        uart0.print((char *) _ssid);
-        uart0.print(": ");
-        WiFi.begin((const char *) _ssid, (const char *) _pass);
-    } else {
-#endif
-        uart0.print("setup: WLAN conn: ");
-        uart0.print(ssid);
-        uart0.print(": ");
-        // TODO: online config over serial, bluetooth
-        WiFi.begin(ssid, password);
-#ifdef WLAN_UART_CONFIGURABLE
+        uart0.println();
     }
 #endif
+    uart0.print("setup: WLAN conn ");
+    uart0.print(ssid);
+    uart0.print(": ");
+    // TODO: online config over serial, bluetooth
+    WiFi.begin(ssid, password);
+
     analogWrite(LED_FLASH, 0);
     if(WiFi.waitForConnectResult() != WL_CONNECTED) {
         while(!WiFi.isConnected()) {

@@ -5,6 +5,7 @@
 #define SET_WIFI_USE_STATIC_IP  1
 #define SET_WIREGUARD_ENABLE    0
 #define SERVO_SILENT_ENABLED    0
+#define WLAN_UART_CONFIGURABLE
 
 extern uint8_t nvs_magic;
 extern int pitchAngle, yawAngle;
